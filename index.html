@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ATC Viajes</title>
+<title>ATC</title>
 <meta name="theme-color" content="#4f6b2c">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="ATC Viajes">
+<meta name="apple-mobile-web-app-title" content="ATC">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
   :root {
@@ -20,13 +20,19 @@
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
   header { background:linear-gradient(160deg,var(--brand),var(--brand2)); color:#fff; padding:calc(18px + env(safe-area-inset-top)) 16px 54px; }
-  .install { display:none; margin:0 auto 12px; max-width:640px; background:var(--cream); color:var(--brand); border:0; border-radius:999px; padding:10px 16px; font-weight:800; font-size:14px; }
-  .top { display:flex; justify-content:space-between; align-items:center; max-width:640px; margin:0 auto; }
+  .top { display:flex; justify-content:space-between; align-items:center; gap:12px; max-width:640px; margin:0 auto; }
+  .who-wrap { display:flex; align-items:center; gap:12px; min-width:0; }
+  .logo { width:46px; height:46px; border-radius:12px; object-fit:cover; background:var(--cream); flex:none; box-shadow:0 2px 8px rgba(0,0,0,.15); }
   .hola { font-size:22px; font-weight:800; color:var(--cream); }
   .fecha { font-size:13px; opacity:.8; margin-top:2px; }
+  .tools { display:flex; align-items:center; gap:8px; flex:none; }
+  .lang { display:flex; background:rgba(255,242,204,.18); border-radius:999px; padding:3px; }
+  .lang button { border:0; background:none; color:var(--cream); font-weight:800; font-size:12px; padding:6px 9px; border-radius:999px; }
+  .lang button.on { background:var(--cream); color:var(--brand); }
   .refresh { background:rgba(255,242,204,.18); border:0; color:var(--cream); width:40px; height:40px; border-radius:50%; font-size:18px; }
   .refresh.spin { animation:rot .9s linear infinite; }
   @keyframes rot { to { transform:rotate(360deg); } }
+  .install { display:none; margin:12px auto 0; background:var(--cream); color:var(--brand); border:0; border-radius:999px; padding:10px 16px; font-weight:800; font-size:14px; }
   main { max-width:640px; margin:-40px auto 0; padding:0 14px 110px; }
   .stats { display:flex; gap:10px; margin-bottom:16px; }
   .stat { flex:1; background:var(--card); border-radius:16px; padding:12px 14px; box-shadow:0 2px 10px rgba(79,107,44,.08); }
@@ -52,7 +58,7 @@
   .lbl { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
   .addr { font-weight:700; }
   .csz { font-size:13px; color:var(--muted); }
-  .go { text-decoration:none; background:var(--cream); color:var(--link); font-weight:800; font-size:13px; border-radius:10px; padding:8px 10px; align-self:center; }
+  .go { text-decoration:none; background:var(--cream); color:var(--link); font-weight:800; font-size:13px; border-radius:10px; padding:8px 10px; align-self:center; white-space:nowrap; }
   .note { margin:0 14px 14px; background:var(--warnbg); color:var(--warn); border-radius:12px; padding:10px 12px; font-weight:700; font-size:14px; }
   .empty { background:var(--card); border-radius:18px; padding:26px 16px; text-align:center; color:var(--muted); box-shadow:0 2px 12px rgba(79,107,44,.06); }
   .empty .big { font-size:34px; }
@@ -85,127 +91,162 @@
 <body>
 <header>
   <div class="top">
-    <div><div class="hola" id="hola">¡Hola!</div><div class="fecha" id="fecha">Cargando…</div></div>
-    <button class="refresh" id="refresh" type="button" aria-label="Actualizar">↻</button>
+    <div class="who-wrap">
+      <img class="logo" id="logo" src="logo.png" alt="" onerror="this.style.display='none'">
+      <div><div class="hola" id="hola">ATC</div><div class="fecha" id="fecha"></div></div>
+    </div>
+    <div class="tools">
+      <div class="lang"><button type="button" data-l="en">EN</button><button type="button" data-l="es">ES</button></div>
+      <button class="refresh" id="refresh" type="button" aria-label="Refresh">↻</button>
+    </div>
   </div>
-  <div style="text-align:center;margin-top:12px"><button class="install" id="install" type="button">⬇ Instalar app</button></div>
+  <div style="text-align:center"><button class="install" id="install" type="button"></button></div>
 </header>
-<main id="main"><div class="card msg"><div class="loader"></div>Cargando tus viajes…</div></main>
+<main id="main"><div class="card msg"><div class="loader"></div><span id="loadmsg"></span></div></main>
 <nav>
-  <button data-v="hoy" type="button"><span class="i">🚗</span>Hoy</button>
-  <button data-v="semana" type="button"><span class="i">📅</span>Esta semana</button>
-  <button data-v="pago" type="button"><span class="i">💵</span>Próximo pago</button>
+  <button data-v="hoy" type="button"><span class="i">🚗</span><span data-t="tabToday"></span></button>
+  <button data-v="semana" type="button"><span class="i">📅</span><span data-t="tabWeek"></span></button>
+  <button data-v="pago" type="button"><span class="i">💵</span><span data-t="tabPay"></span></button>
 </nav>
 <script>
   var API = 'https://script.google.com/macros/s/AKfycbxVOk4MGy0CtxX-xWMMhZVI-wOeDVBbD9S8lC-BGsu6oP-BUHPyeQe4vVB2-yrOyYpoHw/exec';
-  var KEY = '';
-  try { var qk = new URLSearchParams(location.search).get('k'); if (qk) { localStorage.setItem('atc_key', qk); } KEY = qk || localStorage.getItem('atc_key') || ''; } catch (e) { KEY = new URLSearchParams(location.search).get('k') || ''; }
+  var T = {
+    en: { tabToday:'Today', tabWeek:'This week', tabPay:'Next payment', hi:'Hi, {n}!', loading:'Loading your trips…', trip:'trip', trips:'trips', miles:'miles',
+          today:'Today', tomorrow:'Tomorrow', noToday:'No trips today.', noTomorrow:'No trips for tomorrow yet.', weekOf:'Week of ', noWeek:'No trips this week yet.',
+          call:'📞 Call', pickup:'Pick up', dropoff:'Drop off', go:'Go ➜', going:'GOING', ret:'RETURN', both:'Round trip', goOnly:'One way', retOnly:'Return only',
+          nextPay:'Next payment', paysOn:'🗓 Pays on ', paidOn:'✓ Paid on ', included:'Trips included', noPayWeek:'No trips that week.', updated:'Updated ',
+          install:'⬇ Install app', todayTag:'TODAY', noKey:'Open your personal link once to activate the app. Ask Alec for it.',
+          offline:'Couldn\'t load your trips. Check your connection and tap ↻.',
+          days:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] },
+    es: { tabToday:'Hoy', tabWeek:'Esta semana', tabPay:'Próximo pago', hi:'¡Hola, {n}!', loading:'Cargando tus viajes…', trip:'viaje', trips:'viajes', miles:'millas',
+          today:'Hoy', tomorrow:'Mañana', noToday:'No tienes viajes hoy.', noTomorrow:'Todavía no hay viajes para mañana.', weekOf:'Semana del ', noWeek:'Todavía no tienes viajes esta semana.',
+          call:'📞 Llamar', pickup:'Recoger', dropoff:'Dejar', go:'Ir ➜', going:'IDA', ret:'REGRESO', both:'Ida y regreso', goOnly:'Ida solamente', retOnly:'Solo regreso',
+          nextPay:'Próximo pago', paysOn:'🗓 Se paga el ', paidOn:'✓ Pagado el ', included:'Viajes incluidos', noPayWeek:'No tuviste viajes esa semana.', updated:'Actualizado ',
+          install:'⬇ Instalar app', todayTag:'HOY', noKey:'Abre tu enlace personal una vez para activar la app. Pídeselo a Alec.',
+          offline:'No se pudieron cargar los viajes. Revisa tu conexión y toca ↻.',
+          days:['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'] }
+  };
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  var KEY = new URLSearchParams(location.search).get('k') || '';
+  if (KEY) store('atc_key', KEY); else KEY = store('atc_key') || '';
+  var LANG = store('atc_lang') || '';
+  var DATA = null, VIEW = store('atc_view') || 'hoy';
+  function L() { return T[LANG || (DATA && DATA.lang) || 'en']; }
+
   if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function () {}); }
   var deferredPrompt = null;
   window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredPrompt = e; document.getElementById('install').style.display = 'inline-block'; });
   document.getElementById('install').addEventListener('click', function () { if (!deferredPrompt) return; deferredPrompt.prompt(); deferredPrompt.userChoice.finally(function () { deferredPrompt = null; document.getElementById('install').style.display = 'none'; }); });
-  var DATA = null, VIEW = 'hoy';
-  try { VIEW = localStorage.getItem('atc_view') || 'hoy'; } catch (e) {}
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function safeUrl(u) { return /^https:\/\//.test(u) ? esc(u) : '#'; }
   function tel(p) { var d = String(p).replace(/\D/g, '').slice(-10); return d.length === 10 ? 'tel:+1' + d : '#'; }
   function mi(n) { return (Math.round(n * 10) / 10).toFixed(1) + ' mi'; }
-  function cap(s) { s = String(s).toLowerCase(); return s.charAt(0).toUpperCase() + s.slice(1); }
   function nice(name) { var p = String(name).split(','); return p.length > 1 ? p[1].trim() + ' ' + p[0].trim() : name; }
-  function niceDay(label) { var p = label.split(' '); return cap(p[0]) + ' ' + p[1].replace(/\/\d{4}$/, ''); }
+  function dayName(ymd) { var p = ymd.split('-'); return L().days[new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).getUTCDay()]; }
+  function md(ymd) { var p = ymd.split('-'); return (+p[1]) + '/' + (+p[2]); }
+  function niceDay(ymd) { return dayName(ymd) + ' ' + md(ymd); }
 
   function stop(kind, label, addr, csz, map) {
     return '<div class="stop ' + kind + '"><div class="dot"></div><div><div class="lbl">' + label + '</div><div class="addr">' + esc(addr) + '</div>' +
-      (csz ? '<div class="csz">' + esc(csz) + '</div>' : '') + '</div><a class="go" href="' + safeUrl(map) + '" target="_blank" rel="noopener">Ir ➜</a></div>';
+      (csz ? '<div class="csz">' + esc(csz) + '</div>' : '') + '</div><a class="go" href="' + safeUrl(map) + '" target="_blank" rel="noopener">' + L().go + '</a></div>';
   }
   function leg(t, k) {
     var l = t[k]; if (!l) return '';
-    var cls = k === 'ida' ? 'ida' : 'ret', tag = k === 'ida' ? 'IDA' : 'REGRESO';
+    var cls = k === 'ida' ? 'ida' : 'ret', tag = k === 'ida' ? L().going : L().ret;
     return '<div class="leg ' + cls + '"><span class="legtag">' + tag + ' · ' + mi(l.miles) + '</span>' +
-      stop('from', 'Recoger', l.from, l.fromCsz, l.fromMap) + stop('to', 'Dejar', l.to, l.toCsz, l.toMap) + '</div>';
+      stop('from', L().pickup, l.from, l.fromCsz, l.fromMap) + stop('to', L().dropoff, l.to, l.toCsz, l.toMap) + '</div>';
   }
   function card(t) {
-    var legs = (t.ida ? 'Ida' : '') + (t.ida && t.regreso ? ' y regreso' : (t.regreso ? 'Solo regreso' : (t.ida ? ' solamente' : '')));
+    var legs = t.ida && t.regreso ? L().both : t.ida ? L().goOnly : L().retOnly;
     var h = '<div class="card"><div class="chead"><div class="time">' + esc(t.time) + '</div><div><div class="who">' + esc(nice(t.name)) + '</div><div class="sub">' + legs + ' · ' + mi(t.miles) + '</div></div></div>';
     var b = '';
-    if (t.phone) b += '<a class="btn call" href="' + tel(t.phone) + '">📞 Llamar</a>';
+    if (t.phone) b += '<a class="btn call" href="' + tel(t.phone) + '">' + L().call + '</a>';
     (t.family || []).forEach(function (f) { b += '<a class="btn" href="' + tel(f.phone) + '">📞 ' + esc(f.label) + '</a>'; });
     if (b) h += '<div class="btns">' + b + '</div>';
-    if (t.notas) h += '<div class="note">⚠️ ' + esc(t.notas) + '</div>';
+    var note = (LANG || DATA.lang) === 'es' ? t.notas : (t.notes || t.notas);
+    if (note) h += '<div class="note">⚠️ ' + esc(note) + '</div>';
     return h + leg(t, 'ida') + leg(t, 'regreso') + '</div>';
   }
   function stats(trips) {
     var m = trips.reduce(function (s, t) { return s + t.miles; }, 0);
-    return '<div class="stats"><div class="stat"><b>' + trips.length + '</b><span>' + (trips.length === 1 ? 'viaje' : 'viajes') + '</span></div><div class="stat"><b>' + (Math.round(m * 10) / 10) + '</b><span>millas</span></div></div>';
+    return '<div class="stats"><div class="stat"><b>' + trips.length + '</b><span>' + (trips.length === 1 ? L().trip : L().trips) + '</span></div><div class="stat"><b>' + (Math.round(m * 10) / 10) + '</b><span>' + L().miles + '</span></div></div>';
   }
   function renderHoy() {
     var t = DATA.today.trips, m = DATA.tomorrow.trips;
-    var h = stats(t) + '<h2>Hoy · ' + esc(niceDay(DATA.today.label)) + '</h2>';
-    h += t.length ? t.map(card).join('') : '<div class="empty"><div class="big">😎</div>No tienes viajes hoy.</div>';
-    h += '<h2>Mañana · ' + esc(niceDay(DATA.tomorrow.label)) + '</h2>';
-    h += m.length ? m.map(card).join('') : '<div class="empty">Todavía no hay viajes para mañana.</div>';
+    var h = stats(t) + '<h2>' + L().today + ' · ' + esc(niceDay(DATA.today.date)) + '</h2>';
+    h += t.length ? t.map(card).join('') : '<div class="empty"><div class="big">😎</div>' + L().noToday + '</div>';
+    h += '<h2>' + L().tomorrow + ' · ' + esc(niceDay(DATA.tomorrow.date)) + '</h2>';
+    h += m.length ? m.map(card).join('') : '<div class="empty">' + L().noTomorrow + '</div>';
     return h;
   }
   function renderSemana() {
     var w = DATA.week, all = [];
     w.days.forEach(function (d) { all = all.concat(d.trips); });
-    var h = stats(all) + '<h2>Semana del ' + esc(w.label) + '</h2>';
-    if (!w.days.length) return h + '<div class="empty"><div class="big">📭</div>Todavía no tienes viajes esta semana.</div>';
+    var h = stats(all) + '<h2>' + L().weekOf + esc(w.label) + '</h2>';
+    if (!w.days.length) return h + '<div class="empty"><div class="big">📭</div>' + L().noWeek + '</div>';
     w.days.forEach(function (d) {
-      var isToday = d.label === DATA.today.label;
-      h += '<details class="day"' + (isToday ? ' open' : '') + '><summary><span>' + esc(niceDay(d.label)) + (isToday ? '<span class="today">HOY</span>' : '') + '</span><span class="count">' + d.trips.length + (d.trips.length === 1 ? ' viaje' : ' viajes') + '</span></summary><div class="inner">' + d.trips.map(card).join('') + '</div></details>';
+      var isToday = d.date === DATA.today.date;
+      h += '<details class="day"' + (isToday ? ' open' : '') + '><summary><span>' + esc(niceDay(d.date)) + (isToday ? '<span class="today">' + L().todayTag + '</span>' : '') + '</span><span class="count">' + d.trips.length + ' ' + (d.trips.length === 1 ? L().trip : L().trips) + '</span></summary><div class="inner">' + d.trips.map(card).join('') + '</div></details>';
     });
     return h;
   }
   function renderPago() {
     var p = DATA.pay;
-    var h = '<div class="pay"><div class="k">Próximo pago</div><div class="amt">$' + Number(p.amount).toLocaleString('en-US') + '</div>' +
-      '<span class="pill ' + (p.paid ? 'done' : 'wait') + '">' + (p.paid ? '✓ Pagado el ' : '🗓 Se paga el ') + esc(p.sendOn) + '</span>' +
-      '<div class="k" style="margin-top:12px">Semana del ' + esc(p.label) + '</div></div>';
-    if (!p.days.length) return h + '<div class="empty" style="margin-top:14px">No tuviste viajes esa semana.</div>';
-    h += '<h2>Viajes incluidos · ' + mi(p.miles) + '</h2><div class="list">';
+    var h = '<div class="pay"><div class="k">' + L().nextPay + '</div><div class="amt">$' + Number(p.amount).toLocaleString('en-US') + '</div>' +
+      '<span class="pill ' + (p.paid ? 'done' : 'wait') + '">' + (p.paid ? L().paidOn : L().paysOn) + esc(p.sendOn) + '</span>' +
+      '<div class="k" style="margin-top:12px">' + L().weekOf + esc(p.label) + '</div></div>';
+    if (!p.days.length) return h + '<div class="empty" style="margin-top:14px">' + L().noPayWeek + '</div>';
+    h += '<h2>' + L().included + ' · ' + mi(p.miles) + '</h2><div class="list">';
     p.days.forEach(function (d) {
-      h += '<div class="d">' + esc(niceDay(d.label)) + '</div>';
+      h += '<div class="d">' + esc(niceDay(d.date)) + '</div>';
       d.trips.forEach(function (t) { h += '<div class="r"><span>' + esc(t.time) + ' · ' + esc(nice(t.name)) + '</span><span>' + mi(t.miles) + '</span></div>'; });
     });
     return h + '</div>';
   }
-  function render() {
+  function chrome() {
+    var cur = LANG || (DATA && DATA.lang) || 'en';
+    document.documentElement.lang = cur;
+    document.querySelectorAll('[data-t]').forEach(function (e) { e.textContent = L()[e.dataset.t]; });
+    document.querySelectorAll('.lang button').forEach(function (b) { b.classList.toggle('on', b.dataset.l === cur); });
     document.querySelectorAll('nav button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === VIEW); });
-    if (!DATA) return;
-    var html = VIEW === 'semana' ? renderSemana() : VIEW === 'pago' ? renderPago() : renderHoy();
-    document.getElementById('main').innerHTML = html + '<div class="upd">Actualizado ' + esc(DATA.now) + '</div>';
-    window.scrollTo(0, 0);
+    document.getElementById('install').textContent = L().install;
+    var lm = document.getElementById('loadmsg'); if (lm) lm.textContent = L().loading;
+    if (DATA && !DATA.error) {
+      document.getElementById('hola').textContent = L().hi.replace('{n}', DATA.driver);
+      document.getElementById('fecha').textContent = dayName(DATA.today.date) + ', ' + md(DATA.today.date);
+    }
   }
-  function show(d) {
-    if (d && d.error) { document.getElementById('main').innerHTML = '<div class="card msg">' + esc(d.error) + '</div>'; document.getElementById('fecha').textContent = ''; return; }
-    DATA = d;
-    document.getElementById('hola').textContent = '¡Hola, ' + d.driver + '!';
-    document.getElementById('fecha').textContent = cap(d.today.label.split(' ')[0]) + ', ' + d.today.label.split(' ')[1];
-    render();
+  function render() {
+    chrome();
+    if (!DATA) return;
+    if (DATA.error) { document.getElementById('main').innerHTML = '<div class="card msg">' + esc(DATA.error) + '</div>'; return; }
+    var html = VIEW === 'semana' ? renderSemana() : VIEW === 'pago' ? renderPago() : renderHoy();
+    document.getElementById('main').innerHTML = html + '<div class="upd">' + L().updated + esc(DATA.now) + '</div>';
   }
   function load() {
     var r = document.getElementById('refresh'); r.classList.add('spin');
-    if (!KEY) { r.classList.remove('spin'); show({ error: 'Abre tu enlace personal una vez para activar la app. Pídeselo a Alec.' }); return; }
+    if (!KEY) { r.classList.remove('spin'); DATA = { error: L().noKey }; render(); return; }
     fetch(API + '?api=1&k=' + encodeURIComponent(KEY)).then(function (res) { return res.json(); }).then(function (d) {
       r.classList.remove('spin');
-      try { if (!d.error) localStorage.setItem('atc_data', JSON.stringify(d)); } catch (e) {}
-      show(d);
+      if (!d.error) store('atc_data', JSON.stringify(d));
+      DATA = d; render();
     }).catch(function () {
       r.classList.remove('spin');
-      if (!DATA) document.getElementById('main').innerHTML = '<div class="card msg">No se pudieron cargar los viajes. Revisa tu conexión y toca ↻.</div>';
+      if (!DATA) document.getElementById('main').innerHTML = '<div class="card msg">' + L().offline + '</div>';
     });
   }
-  try { var cached = localStorage.getItem('atc_data'); if (cached && KEY) DATA = JSON.parse(cached); } catch (e) {}
   document.querySelectorAll('nav button').forEach(function (b) {
-    b.addEventListener('click', function () { VIEW = b.dataset.v; try { localStorage.setItem('atc_view', VIEW); } catch (e) {} render(); });
+    b.addEventListener('click', function () { VIEW = b.dataset.v; store('atc_view', VIEW); render(); window.scrollTo(0, 0); });
+  });
+  document.querySelectorAll('.lang button').forEach(function (b) {
+    b.addEventListener('click', function () { LANG = b.dataset.l; store('atc_lang', LANG); render(); });
   });
   document.getElementById('refresh').addEventListener('click', load);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) load(); });
   setInterval(load, 5 * 60 * 1000);
-  if (DATA) show(DATA); else render();
-  load();
+  try { var cached = store('atc_data'); if (cached && KEY) DATA = JSON.parse(cached); } catch (e) {}
+  render(); load();
 </script>
 </body>
 </html>

@@ -1,12 +1,12 @@
 {
- "name": "ATC Viajes",
- "short_name": "ATC Viajes",
+ "name": "ATC",
+ "short_name": "ATC",
  "start_url": "./",
  "scope": "./",
  "display": "standalone",
  "background_color": "#f7f2e2",
  "theme_color": "#4f6b2c",
- "lang": "es",
+ "lang": "en",
  "orientation": "portrait",
  "icons": [
   {
