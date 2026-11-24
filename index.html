@@ -72,6 +72,24 @@
   .addr { font-weight:700; }
   .csz { font-size:13px; color:var(--muted); }
   .go { text-decoration:none; background:var(--cream); color:var(--link); font-weight:800; font-size:13px; border-radius:10px; padding:8px 10px; align-self:center; white-space:nowrap; }
+  nav button.adm { display:none; }
+  .st { display:inline-block; font-size:12px; font-weight:800; border-radius:999px; padding:3px 9px; white-space:nowrap; }
+  .st.pend { background:#f1ecdc; color:#7a6a3a; } .st.pu { background:#fff1c2; color:#7a5200; } .st.dn { background:var(--accentbg); color:var(--brand); } .st.na { background:var(--warnbg); color:var(--warn); }
+  .lrow { display:flex; align-items:center; gap:8px; padding:10px 14px; border-top:1px solid var(--line); font-size:14px; }
+  .lrow .legtag { margin:0; } .lrow .drv { font-weight:800; flex:1; min-width:0; }
+  .lrow .rt { font-size:12px; color:var(--muted); }
+  .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .kpi { background:var(--card); border-radius:16px; padding:12px; box-shadow:0 2px 10px rgba(79,107,44,.07); }
+  .kpi b { display:block; font-size:19px; } .kpi span { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; font-weight:700; }
+  .kpi.pos b { color:var(--brand); } .kpi.neg b { color:var(--ret); }
+  .list .r.h { font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:800; letter-spacing:.4px; padding:8px 14px; }
+  .list .r .c { min-width:70px; text-align:right; }
+  details.dv > summary { list-style:none; display:flex; justify-content:space-between; align-items:center; padding:13px 14px; border-top:1px solid var(--line); font-weight:800; cursor:pointer; }
+  details.dv > summary::-webkit-details-marker { display:none; }
+  details.dv .tr { display:flex; justify-content:space-between; gap:8px; padding:8px 14px 8px 24px; font-size:14px; color:var(--muted); border-top:1px dashed var(--line); }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 6px; }
+  .chip { border:0; border-radius:999px; padding:9px 16px; font:inherit; font-weight:800; font-size:14px; background:var(--card); color:var(--brand); box-shadow:0 2px 8px rgba(79,107,44,.08); }
+  .chip.on { background:var(--brand); color:#fff; }
   .chk { display:flex; gap:8px; margin-top:12px; }
   .chk button { flex:1; border:0; border-radius:12px; padding:12px 6px; font:inherit; font-weight:800; font-size:14px; background:var(--brand); color:#fff; cursor:pointer; }
   .chk button.ok { background:var(--accentbg); color:var(--brand); }
@@ -125,6 +143,10 @@
   <button data-v="hoy" type="button"><span class="i">🚗</span><span data-t="tabToday"></span></button>
   <button data-v="semana" type="button"><span class="i">📅</span><span data-t="tabWeek"></span></button>
   <button data-v="pago" type="button"><span class="i">💵</span><span data-t="tabPay"></span></button>
+  <button data-v="trips" type="button" class="adm"><span class="i">📋</span><span>Trips</span></button>
+  <button data-v="money" type="button" class="adm"><span class="i">📈</span><span>Money</span></button>
+  <button data-v="payouts" type="button" class="adm"><span class="i">💵</span><span>Payouts</span></button>
+  <button data-v="drivers" type="button" class="adm"><span class="i">👥</span><span>Drivers</span></button>
 </nav>
 <script>
   var API = 'https://script.google.com/macros/s/AKfycbxVOk4MGy0CtxX-xWMMhZVI-wOeDVBbD9S8lC-BGsu6oP-BUHPyeQe4vVB2-yrOyYpoHw/exec';
@@ -152,7 +174,7 @@
   var KEY = new URLSearchParams(location.search).get('k') || '';
   if (KEY) store('atc_key', KEY); else KEY = store('atc_key') || '';
   var LANG = store('atc_lang') || '';
-  var DATA = null, VIEW = store('atc_view') || 'hoy';
+  var DATA = null, VIEW = store('atc_view') || 'hoy', RO = false, DRV = store('atc_drv') || '';
   var COLLAPSED = []; try { COLLAPSED = JSON.parse(store('atc_collapsed') || '[]') || []; } catch (e) { COLLAPSED = []; }
   function L() { return T[LANG || (DATA && DATA.lang) || 'en']; }
 
@@ -177,11 +199,12 @@
   function leg(t, k) {
     var l = t[k]; if (!l) return '';
     var cls = k === 'ida' ? 'ida' : 'ret', tag = k === 'ida' ? L().going : L().ret;
-    return '<div class="leg ' + cls + '"><span class="legtag">' + tag + ' · ' + mi(l.miles) + '</span>' +
+    return '<div class="leg ' + cls + '"><span class="legtag">' + tag + ' · ' + mi(l.miles) + (l.uber ? ' · 🚕 UBER' : '') + '</span>' +
+      (RO ? ' ' + stat(t, k) : '') +
       stop('from', L().pickup, l.from, l.fromCsz, l.fromMap) + stop('to', L().dropoff, l.to, l.toCsz, l.toMap) + checks(t, k) + '</div>';
   }
   function checks(t, k) {
-    if (!t.key || !DATA || !DATA.today || t.date !== DATA.today.date) return '';
+    if (RO || !t.key || !DATA || !DATA.today || t.date !== DATA.today.date) return '';
     var d = t.done || {}, pu = d[k + '_pickup'], dr = d[k + '_dropoff'];
     var b = function (step, label, at, wait) {
       return '<button type="button" class="' + (at ? 'ok' : wait ? 'wait' : '') + '" data-trip="' + esc(t.key) + '" data-leg="' + k + '" data-step="' + step + '" data-name="' + esc(nice(t.name)) + '"' +
@@ -245,6 +268,101 @@
     });
     return h;
   }
+  function $$(n) { var v = Math.round(Number(n || 0) * 100) / 100, neg = v < 0; return (neg ? '-$' : '$') + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function $0(n) { return '$' + Math.round(Number(n || 0)).toLocaleString('en-US'); }
+  function stat(t, k) {
+    var d = t.done || {}, dn = d[k + '_dropoff'], pu = d[k + '_pickup'];
+    if (dn) return '<span class="st dn">✅ Dropped off ' + esc(dn) + '</span>';
+    if (pu) return '<span class="st pu">🟢 Picked up ' + esc(pu) + '</span>';
+    if (t.date > DATA.today.date) return '<span class="st pend">Scheduled</span>';
+    return '<span class="st pend">⏳ Pending</span>';
+  }
+  function legRow(t, k) {
+    var l = t[k]; if (!l) return '';
+    var cls = k === 'ida' ? 'ida' : 'ret', tag = k === 'ida' ? 'GOING' : 'RETURN';
+    var drv = l.driver ? esc(l.driver) : '<span class="st na">Unassigned</span>';
+    return '<div class="lrow ' + cls + '"><span class="legtag">' + tag + '</span><span class="drv">' + drv + '<div class="rt">' + esc(l.from) + ' → ' + esc(l.to) + ' · ' + mi(l.miles) + '</div></span>' + stat(t, k) + '</div>';
+  }
+  function tripRow(t) {
+    var id = 'all|' + t.key + '|' + t.date, shut = COLLAPSED.indexOf(id) >= 0;
+    var h = '<div class="card' + (shut ? ' shut' : '') + '" data-cid="' + esc(id) + '"><div class="chead" role="button"><div class="time">' + esc(t.time) + '</div><div class="whobox"><div class="who">' + esc(nice(t.name)) + '</div><div class="sub">' + esc(t.src) + ' · ' + mi(t.miles) + '</div></div><span class="chev">▾</span></div><div class="cbody">';
+    if (t.notes) h += '<div class="note" style="margin:0 14px 10px">⚠️ ' + esc(t.notes) + '</div>';
+    return h + legRow(t, 'ida') + legRow(t, 'regreso') + '</div></div>';
+  }
+  function renderTrips() {
+    var a = DATA.all, t = a.today, legs = 0, done = 0;
+    t.forEach(function (x) { ['ida', 'regreso'].forEach(function (k) { if (x[k]) { legs++; if ((x.done || {})[k + '_dropoff']) done++; } }); });
+    var miles = t.reduce(function (s, x) { return s + x.miles; }, 0);
+    var h = '<div class="kpis"><div class="kpi"><b>' + t.length + '</b><span>Trips</span></div><div class="kpi"><b>' + done + '/' + legs + '</b><span>Legs done</span></div><div class="kpi"><b>' + (Math.round(miles * 10) / 10) + '</b><span>Miles</span></div></div>';
+    h += '<h2>Today · ' + esc(niceDay(DATA.today.date)) + '</h2>';
+    h += t.length ? t.map(tripRow).join('') : '<div class="empty">No trips today.</div>';
+    h += '<details class="day"><summary><span>Tomorrow · ' + esc(niceDay(a.tomorrowDate)) + '</span><span class="count">' + a.tomorrow.length + ' trips</span></summary><div class="inner">' +
+      (a.tomorrow.length ? a.tomorrow.map(tripRow).join('') : '<div class="empty">No trips yet.</div>') + '</div></details>';
+    return h;
+  }
+  function kpis(o) {
+    return '<div class="kpis"><div class="kpi"><b>' + $0(o.revenue) + '</b><span>Revenue</span></div><div class="kpi neg"><b>' + $0(o.pay) + '</b><span>Driver pay</span></div><div class="kpi pos"><b>' + $0(o.profit) + '</b><span>Profit</span></div></div>';
+  }
+  function periodHtml(p, open) {
+    var t = p.total, src = Object.keys(t.bySrc).map(function (s) { return esc(s) + ' ' + $$(t.bySrc[s]); }).join(' · ');
+    var h = '<div class="pay" style="text-align:left"><div class="k">Pay period ' + esc(md(p.start)) + ' – ' + esc(md(p.end)) + ' (Wed–Tue)</div><div class="amt" style="font-size:40px">' + $$(t.revenue) + '</div>' +
+      '<div class="k" style="opacity:.9">' + t.trips + ' trips' + (src ? ' · ' + src : '') + '</div></div>';
+    h += '<div style="margin-top:10px">' + kpis(t) + '</div>';
+    h += '<div class="list" style="margin-top:10px"><div class="r h"><span>Day</span><span class="c">Revenue</span><span class="c">Profit</span></div>';
+    p.days.forEach(function (d) {
+      var isT = d.date === DATA.today.date;
+      h += '<div class="r"' + (isT ? ' style="background:var(--cream)"' : '') + '><span>' + esc(niceDay(d.date)) + ' <span style="color:var(--muted);font-size:12px">· ' + d.trips + '</span></span><span class="c">' + $0(d.revenue) + '</span><span class="c" style="color:var(--brand);font-weight:800">' + $0(d.profit) + '</span></div>';
+    });
+    return h + '</div>';
+  }
+  function renderMoney() {
+    var m = DATA.money;
+    var h = '<h2>Today · ' + esc(niceDay(DATA.today.date)) + ' · ' + m.today.trips + ' trips</h2>' + kpis(m.today);
+    h += '<h2>This pay period</h2>' + periodHtml(m.current);
+    h += '<details class="day" style="margin-top:16px"><summary><span>Last pay period · ' + esc(md(m.previous.start)) + ' – ' + esc(md(m.previous.end)) + '</span><span class="count">' + $0(m.previous.total.revenue) + '</span></summary><div class="inner">' + periodHtml(m.previous) + '</div></details>';
+    h += '<div class="upd">Revenue = trip totals · Profit = Keep column. Trips without pay entered count as full profit.</div>';
+    return h;
+  }
+  function renderPayouts() {
+    var ps = DATA.payouts || [];
+    if (!ps.length) return '<div class="empty">No upcoming payouts found.</div>';
+    var h = '';
+    ps.forEach(function (p, i) {
+      h += '<h2>' + (i === 0 ? 'Next payout' : 'Following payout') + ' · ' + esc(niceDay(p.sendOn)) + '</h2>';
+      h += '<div class="pay"><div class="k">Week of ' + esc(md(p.start)) + ' – ' + esc(md(p.end)) + '</div><div class="amt">' + $0(p.total) + '</div><div class="k">' + p.drivers.length + ' drivers</div></div>';
+      h += '<div class="list" style="margin-top:10px">';
+      p.drivers.forEach(function (d) {
+        var src = Object.keys(d.bySrc).length > 1 ? Object.keys(d.bySrc).map(function (s) { return esc(s) + ' ' + $0(d.bySrc[s]); }).join(' · ') : '';
+        h += '<details class="dv"><summary><span>' + esc(d.name) + ' <span style="color:var(--muted);font-size:12px;font-weight:700">· ' + d.trips.length + ' trips</span></span><span>' + (d.amount ? $0(d.amount) : '<span class="st pend">Pay not entered</span>') + '</span></summary>' +
+          (src ? '<div class="tr"><span>' + src + '</span></div>' : '') +
+          d.trips.map(function (t) {
+            var legs = t.legs.length === 2 ? 'Round trip' : t.legs[0] === 'ida' ? 'Going' : 'Return';
+            return '<div class="tr"><span>' + esc(md(t.date)) + ' ' + esc(t.time) + ' · ' + esc(nice(t.name)) + '</span><span>' + legs + '</span></div>';
+          }).join('') + '</details>';
+      });
+      h += '</div>';
+    });
+    return h;
+  }
+  function renderDrivers() {
+    var ss = DATA.schedules || [];
+    if (!ss.length) return '<div class="empty">No drivers found.</div>';
+    var cur = ss.filter(function (s) { return s.name === DRV; })[0] || ss[0];
+    var h = '<div class="chips">' + ss.map(function (s) { return '<button type="button" class="chip' + (s === cur ? ' on' : '') + '" data-drv="' + esc(s.name) + '">' + esc(s.name) + '</button>'; }).join('') + '</div>';
+    var today = cur.trips.filter(function (t) { return t.date === DATA.today.date; });
+    var later = cur.trips.filter(function (t) { return t.date > DATA.today.date; });
+    RO = true;
+    h += stats(today) + '<h2>Today · ' + esc(niceDay(DATA.today.date)) + '</h2>';
+    h += today.length ? today.map(card).join('') : '<div class="empty">' + esc(cur.name) + ' has no trips today.</div>';
+    h += '<h2>Rest of the week</h2>';
+    var days = {}, order = [];
+    later.forEach(function (t) { if (!days[t.date]) { days[t.date] = []; order.push(t.date); } days[t.date].push(t); });
+    h += order.length ? order.map(function (d) {
+      return '<details class="day"><summary><span>' + esc(niceDay(d)) + '</span><span class="count">' + days[d].length + ' trips</span></summary><div class="inner">' + days[d].map(card).join('') + '</div></details>';
+    }).join('') : '<div class="empty">Nothing else this week.</div>';
+    RO = false;
+    return h;
+  }
   function renderPago() {
     var p = DATA.pay;
     var h = '<div class="pay"><div class="k">' + L().nextPay + '</div><div class="amt">$' + Number(p.amount).toLocaleString('en-US') + '</div>' +
@@ -263,11 +381,16 @@
     document.documentElement.lang = cur;
     document.querySelectorAll('[data-t]').forEach(function (e) { e.textContent = L()[e.dataset.t]; });
     document.querySelectorAll('.lang button').forEach(function (b) { b.classList.toggle('on', b.dataset.l === cur); });
-    document.querySelectorAll('nav button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === VIEW); });
+    var adm = !!(DATA && DATA.admin);
+    document.querySelectorAll('nav button').forEach(function (b) {
+      var isAdm = b.classList.contains('adm'), hideForAdm = b.dataset.v === 'semana' || b.dataset.v === 'pago';
+      b.style.display = adm ? (hideForAdm ? 'none' : 'block') : (isAdm ? 'none' : 'block');
+      b.classList.toggle('on', b.dataset.v === VIEW);
+    });
     document.getElementById('install').textContent = L().install;
     var lm = document.getElementById('loadmsg'); if (lm) lm.textContent = L().loading;
     if (DATA && !DATA.error) {
-      document.getElementById('hola').textContent = L().hi.replace('{n}', DATA.driver);
+      document.getElementById('hola').textContent = L().hi.replace('{n}', DATA.admin ? 'Alec' : DATA.driver);
       document.getElementById('fecha').textContent = dayName(DATA.today.date) + ', ' + md(DATA.today.date);
     }
   }
@@ -287,7 +410,12 @@
       return;
     }
     if (DATA.error) { document.getElementById('main').innerHTML = '<div class="card msg">' + esc(DATA.error) + '</div>'; return; }
-    var html = VIEW === 'semana' ? renderSemana() : VIEW === 'pago' ? renderPago() : renderHoy();
+    var adminViews = { trips: renderTrips, money: renderMoney, payouts: renderPayouts, drivers: renderDrivers };
+    if (adminViews[VIEW] && !DATA.admin) VIEW = 'hoy';
+    if (DATA.admin && (VIEW === 'semana' || VIEW === 'pago')) VIEW = 'hoy';
+    if (DATA.admin && DATA.adminError && VIEW !== 'hoy') { document.getElementById('main').innerHTML = '<div class="card msg">Couldn\'t load this tab: ' + esc(DATA.adminError) + '</div>'; return; }
+    chrome();
+    var html = adminViews[VIEW] && DATA.admin ? adminViews[VIEW]() : VIEW === 'semana' ? renderSemana() : VIEW === 'pago' ? renderPago() : renderHoy();
     document.getElementById('main').innerHTML = html + '<div class="upd">' + L().updated + esc(DATA.now) + '</div>';
   }
   function load() {
@@ -310,6 +438,8 @@
   });
   document.getElementById('refresh').addEventListener('click', load);
   document.getElementById('main').addEventListener('click', function (e) {
+    var chip = e.target.closest && e.target.closest('.chip');
+    if (chip) { DRV = chip.getAttribute('data-drv'); store('atc_drv', DRV); render(); return; }
     var mk = e.target.closest && e.target.closest('.chk button');
     if (mk) { if (!mk.disabled) markStep(mk); return; }
     var hd = e.target.closest && e.target.closest('.chead'); if (!hd) return;
