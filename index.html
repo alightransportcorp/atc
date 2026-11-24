@@ -73,6 +73,7 @@
   .csz { font-size:13px; color:var(--muted); }
   .go { text-decoration:none; background:var(--cream); color:var(--link); font-weight:800; font-size:13px; border-radius:10px; padding:8px 10px; align-self:center; white-space:nowrap; }
   nav button.adm { display:none; }
+  main > h2:first-child { color:rgba(255,248,225,.92); margin-top:4px; }
   .st { display:inline-block; font-size:12px; font-weight:800; border-radius:999px; padding:3px 9px; white-space:nowrap; }
   .st.pend { background:#f1ecdc; color:#7a6a3a; } .st.pu { background:#fff1c2; color:#7a5200; } .st.dn { background:var(--accentbg); color:var(--brand); } .st.na { background:var(--warnbg); color:var(--warn); }
   .lrow { display:flex; align-items:center; gap:8px; padding:10px 14px; border-top:1px solid var(--line); font-size:14px; }
@@ -385,7 +386,8 @@
     document.querySelectorAll('nav button').forEach(function (b) {
       var isAdm = b.classList.contains('adm'), hideForAdm = b.dataset.v === 'semana' || b.dataset.v === 'pago';
       b.style.display = adm ? (hideForAdm ? 'none' : 'block') : (isAdm ? 'none' : 'block');
-      b.classList.toggle('on', b.dataset.v === VIEW);
+      var v = VIEW; if (!adm && /^(trips|money|payouts|drivers)$/.test(v)) v = 'hoy'; if (adm && /^(semana|pago)$/.test(v)) v = 'hoy';
+      b.classList.toggle('on', b.dataset.v === v);
     });
     document.getElementById('install').textContent = L().install;
     var lm = document.getElementById('loadmsg'); if (lm) lm.textContent = L().loading;
@@ -411,11 +413,12 @@
     }
     if (DATA.error) { document.getElementById('main').innerHTML = '<div class="card msg">' + esc(DATA.error) + '</div>'; return; }
     var adminViews = { trips: renderTrips, money: renderMoney, payouts: renderPayouts, drivers: renderDrivers };
-    if (adminViews[VIEW] && !DATA.admin) VIEW = 'hoy';
-    if (DATA.admin && (VIEW === 'semana' || VIEW === 'pago')) VIEW = 'hoy';
+    var V = VIEW;
+    if (adminViews[V] && !DATA.admin) V = 'hoy';
+    if (DATA.admin && (V === 'semana' || V === 'pago')) V = 'hoy';
     if (DATA.admin && DATA.adminError && VIEW !== 'hoy') { document.getElementById('main').innerHTML = '<div class="card msg">Couldn\'t load this tab: ' + esc(DATA.adminError) + '</div>'; return; }
     chrome();
-    var html = adminViews[VIEW] && DATA.admin ? adminViews[VIEW]() : VIEW === 'semana' ? renderSemana() : VIEW === 'pago' ? renderPago() : renderHoy();
+    var html = adminViews[V] && DATA.admin ? adminViews[V]() : V === 'semana' ? renderSemana() : V === 'pago' ? renderPago() : renderHoy();
     document.getElementById('main').innerHTML = html + '<div class="upd">' + L().updated + esc(DATA.now) + '</div>';
   }
   function load() {
