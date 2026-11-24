@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ATC Viajes</title>
+<meta name="theme-color" content="#4f6b2c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ATC Viajes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root {
+    --bg:#f7f2e2; --card:#fffdf7; --ink:#2a2e1f; --muted:#7a7a62; --line:#ece4cc;
+    --brand:#4f6b2c; --brand2:#6b8a3a; --accent:#5b8a43; --accentbg:#eaf2dc; --cream:#fff2cc;
+    --ret:#e8590c; --retbg:#fff1e6; --warn:#b45309; --warnbg:#fff7e0; --link:#4f6b2c;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
+  header { background:linear-gradient(160deg,var(--brand),var(--brand2)); color:#fff; padding:calc(18px + env(safe-area-inset-top)) 16px 54px; }
+  .install { display:none; margin:0 auto 12px; max-width:640px; background:var(--cream); color:var(--brand); border:0; border-radius:999px; padding:10px 16px; font-weight:800; font-size:14px; }
+  .top { display:flex; justify-content:space-between; align-items:center; max-width:640px; margin:0 auto; }
+  .hola { font-size:22px; font-weight:800; color:var(--cream); }
+  .fecha { font-size:13px; opacity:.8; margin-top:2px; }
+  .refresh { background:rgba(255,242,204,.18); border:0; color:var(--cream); width:40px; height:40px; border-radius:50%; font-size:18px; }
+  .refresh.spin { animation:rot .9s linear infinite; }
+  @keyframes rot { to { transform:rotate(360deg); } }
+  main { max-width:640px; margin:-40px auto 0; padding:0 14px 110px; }
+  .stats { display:flex; gap:10px; margin-bottom:16px; }
+  .stat { flex:1; background:var(--card); border-radius:16px; padding:12px 14px; box-shadow:0 2px 10px rgba(79,107,44,.08); }
+  .stat b { display:block; font-size:24px; }
+  .stat span { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+  h2 { font-size:13px; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); margin:22px 4px 10px; }
+  .card { background:var(--card); border-radius:18px; box-shadow:0 2px 12px rgba(79,107,44,.08); margin-bottom:14px; overflow:hidden; }
+  .chead { display:flex; align-items:center; gap:12px; padding:14px 14px 10px; }
+  .time { background:var(--brand); color:var(--cream); font-weight:800; border-radius:12px; padding:8px 10px; font-size:15px; white-space:nowrap; }
+  .who { font-weight:800; font-size:17px; line-height:1.2; }
+  .sub { color:var(--muted); font-size:13px; margin-top:2px; }
+  .btns { display:flex; flex-wrap:wrap; gap:8px; padding:0 14px 12px; }
+  .btn { display:inline-flex; align-items:center; gap:6px; text-decoration:none; font-weight:700; font-size:14px; border-radius:999px; padding:9px 14px; background:var(--accentbg); color:var(--brand); }
+  .btn.call { background:var(--accent); color:#fff; }
+  .leg { border-top:1px solid var(--line); padding:12px 14px; }
+  .legtag { display:inline-block; font-size:12px; font-weight:800; letter-spacing:.5px; border-radius:999px; padding:3px 10px; margin-bottom:8px; }
+  .ida .legtag { background:var(--accentbg); color:var(--accent); }
+  .ret .legtag { background:var(--retbg); color:var(--ret); }
+  .stop { display:grid; grid-template-columns:18px 1fr auto; gap:10px; align-items:start; position:relative; padding:4px 0; }
+  .dot { width:12px; height:12px; border-radius:50%; margin-top:5px; border:3px solid var(--accent); background:#fff; }
+  .stop.to .dot { border-color:var(--ret); background:var(--ret); }
+  .stop.from::after { content:""; position:absolute; left:5px; top:22px; bottom:-10px; width:2px; background:var(--line); }
+  .lbl { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+  .addr { font-weight:700; }
+  .csz { font-size:13px; color:var(--muted); }
+  .go { text-decoration:none; background:var(--cream); color:var(--link); font-weight:800; font-size:13px; border-radius:10px; padding:8px 10px; align-self:center; }
+  .note { margin:0 14px 14px; background:var(--warnbg); color:var(--warn); border-radius:12px; padding:10px 12px; font-weight:700; font-size:14px; }
+  .empty { background:var(--card); border-radius:18px; padding:26px 16px; text-align:center; color:var(--muted); box-shadow:0 2px 12px rgba(79,107,44,.06); }
+  .empty .big { font-size:34px; }
+  details.day { background:var(--card); border-radius:16px; box-shadow:0 2px 10px rgba(79,107,44,.07); margin-bottom:10px; overflow:hidden; }
+  details.day > summary { list-style:none; display:flex; justify-content:space-between; align-items:center; padding:14px 16px; font-weight:800; cursor:pointer; }
+  details.day > summary::-webkit-details-marker { display:none; }
+  details.day > summary .count { background:var(--bg); color:var(--muted); font-size:13px; border-radius:999px; padding:3px 10px; }
+  details.day > summary .today { background:var(--accent); color:#fff; font-size:11px; border-radius:999px; padding:2px 8px; margin-left:8px; vertical-align:middle; }
+  details.day[open] > summary { border-bottom:1px solid var(--line); }
+  details.day .inner { padding:12px 10px 2px; background:var(--bg); }
+  .pay { background:linear-gradient(160deg,var(--brand),var(--brand2)); color:#fff; border-radius:20px; padding:20px; text-align:center; box-shadow:0 4px 16px rgba(79,107,44,.2); }
+  .pay .k { font-size:13px; opacity:.8; text-transform:uppercase; letter-spacing:.6px; }
+  .pay .amt { font-size:52px; font-weight:900; margin:6px 0; color:var(--cream); }
+  .pill { display:inline-block; border-radius:999px; padding:5px 12px; font-weight:800; font-size:13px; }
+  .pill.wait { background:#ffd166; color:#5c3d00; } .pill.done { background:#7ee2b8; color:#063d26; }
+  .list { background:var(--card); border-radius:16px; box-shadow:0 2px 10px rgba(79,107,44,.07); overflow:hidden; }
+  .list .d { background:var(--cream); color:var(--muted); font-size:12px; font-weight:800; letter-spacing:.4px; padding:8px 14px; text-transform:uppercase; }
+  .list .r { display:flex; justify-content:space-between; gap:10px; padding:11px 14px; border-top:1px solid var(--line); font-size:15px; }
+  .list .r span:last-child { color:var(--muted); white-space:nowrap; }
+  nav { position:fixed; left:0; right:0; bottom:0; background:rgba(255,253,247,.97); backdrop-filter:blur(8px); border-top:1px solid var(--line); display:flex; padding:6px 8px calc(8px + env(safe-area-inset-bottom)); z-index:9; }
+  nav button { flex:1; border:0; background:none; color:var(--muted); font-size:12px; font-weight:700; padding:6px 4px; border-radius:14px; }
+  nav button .i { display:block; font-size:22px; line-height:1.1; filter:grayscale(1); opacity:.6; }
+  nav button.on { color:var(--brand); background:var(--cream); }
+  nav button.on .i { filter:none; opacity:1; }
+  .msg { text-align:center; color:var(--muted); padding:40px 16px; }
+  .loader { width:30px; height:30px; border:3px solid #d1d5db; border-top-color:var(--brand); border-radius:50%; margin:0 auto 10px; animation:rot .8s linear infinite; }
+  .upd { text-align:center; color:var(--muted); font-size:12px; margin-top:18px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div><div class="hola" id="hola">¡Hola!</div><div class="fecha" id="fecha">Cargando…</div></div>
+    <button class="refresh" id="refresh" type="button" aria-label="Actualizar">↻</button>
+  </div>
+  <div style="text-align:center;margin-top:12px"><button class="install" id="install" type="button">⬇ Instalar app</button></div>
+</header>
+<main id="main"><div class="card msg"><div class="loader"></div>Cargando tus viajes…</div></main>
+<nav>
+  <button data-v="hoy" type="button"><span class="i">🚗</span>Hoy</button>
+  <button data-v="semana" type="button"><span class="i">📅</span>Esta semana</button>
+  <button data-v="pago" type="button"><span class="i">💵</span>Próximo pago</button>
+</nav>
+<script>
+  var API = 'https://script.google.com/macros/s/AKfycbxVOk4MGy0CtxX-xWMMhZVI-wOeDVBbD9S8lC-BGsu6oP-BUHPyeQe4vVB2-yrOyYpoHw/exec';
+  var KEY = '';
+  try { var qk = new URLSearchParams(location.search).get('k'); if (qk) { localStorage.setItem('atc_key', qk); } KEY = qk || localStorage.getItem('atc_key') || ''; } catch (e) { KEY = new URLSearchParams(location.search).get('k') || ''; }
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function () {}); }
+  var deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredPrompt = e; document.getElementById('install').style.display = 'inline-block'; });
+  document.getElementById('install').addEventListener('click', function () { if (!deferredPrompt) return; deferredPrompt.prompt(); deferredPrompt.userChoice.finally(function () { deferredPrompt = null; document.getElementById('install').style.display = 'none'; }); });
+  var DATA = null, VIEW = 'hoy';
+  try { VIEW = localStorage.getItem('atc_view') || 'hoy'; } catch (e) {}
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function safeUrl(u) { return /^https:\/\//.test(u) ? esc(u) : '#'; }
+  function tel(p) { var d = String(p).replace(/\D/g, '').slice(-10); return d.length === 10 ? 'tel:+1' + d : '#'; }
+  function mi(n) { return (Math.round(n * 10) / 10).toFixed(1) + ' mi'; }
+  function cap(s) { s = String(s).toLowerCase(); return s.charAt(0).toUpperCase() + s.slice(1); }
+  function nice(name) { var p = String(name).split(','); return p.length > 1 ? p[1].trim() + ' ' + p[0].trim() : name; }
+  function niceDay(label) { var p = label.split(' '); return cap(p[0]) + ' ' + p[1].replace(/\/\d{4}$/, ''); }
+
+  function stop(kind, label, addr, csz, map) {
+    return '<div class="stop ' + kind + '"><div class="dot"></div><div><div class="lbl">' + label + '</div><div class="addr">' + esc(addr) + '</div>' +
+      (csz ? '<div class="csz">' + esc(csz) + '</div>' : '') + '</div><a class="go" href="' + safeUrl(map) + '" target="_blank" rel="noopener">Ir ➜</a></div>';
+  }
+  function leg(t, k) {
+    var l = t[k]; if (!l) return '';
+    var cls = k === 'ida' ? 'ida' : 'ret', tag = k === 'ida' ? 'IDA' : 'REGRESO';
+    return '<div class="leg ' + cls + '"><span class="legtag">' + tag + ' · ' + mi(l.miles) + '</span>' +
+      stop('from', 'Recoger', l.from, l.fromCsz, l.fromMap) + stop('to', 'Dejar', l.to, l.toCsz, l.toMap) + '</div>';
+  }
+  function card(t) {
+    var legs = (t.ida ? 'Ida' : '') + (t.ida && t.regreso ? ' y regreso' : (t.regreso ? 'Solo regreso' : (t.ida ? ' solamente' : '')));
+    var h = '<div class="card"><div class="chead"><div class="time">' + esc(t.time) + '</div><div><div class="who">' + esc(nice(t.name)) + '</div><div class="sub">' + legs + ' · ' + mi(t.miles) + '</div></div></div>';
+    var b = '';
+    if (t.phone) b += '<a class="btn call" href="' + tel(t.phone) + '">📞 Llamar</a>';
+    (t.family || []).forEach(function (f) { b += '<a class="btn" href="' + tel(f.phone) + '">📞 ' + esc(f.label) + '</a>'; });
+    if (b) h += '<div class="btns">' + b + '</div>';
+    if (t.notas) h += '<div class="note">⚠️ ' + esc(t.notas) + '</div>';
+    return h + leg(t, 'ida') + leg(t, 'regreso') + '</div>';
+  }
+  function stats(trips) {
+    var m = trips.reduce(function (s, t) { return s + t.miles; }, 0);
+    return '<div class="stats"><div class="stat"><b>' + trips.length + '</b><span>' + (trips.length === 1 ? 'viaje' : 'viajes') + '</span></div><div class="stat"><b>' + (Math.round(m * 10) / 10) + '</b><span>millas</span></div></div>';
+  }
+  function renderHoy() {
+    var t = DATA.today.trips, m = DATA.tomorrow.trips;
+    var h = stats(t) + '<h2>Hoy · ' + esc(niceDay(DATA.today.label)) + '</h2>';
+    h += t.length ? t.map(card).join('') : '<div class="empty"><div class="big">😎</div>No tienes viajes hoy.</div>';
+    h += '<h2>Mañana · ' + esc(niceDay(DATA.tomorrow.label)) + '</h2>';
+    h += m.length ? m.map(card).join('') : '<div class="empty">Todavía no hay viajes para mañana.</div>';
+    return h;
+  }
+  function renderSemana() {
+    var w = DATA.week, all = [];
+    w.days.forEach(function (d) { all = all.concat(d.trips); });
+    var h = stats(all) + '<h2>Semana del ' + esc(w.label) + '</h2>';
+    if (!w.days.length) return h + '<div class="empty"><div class="big">📭</div>Todavía no tienes viajes esta semana.</div>';
+    w.days.forEach(function (d) {
+      var isToday = d.label === DATA.today.label;
+      h += '<details class="day"' + (isToday ? ' open' : '') + '><summary><span>' + esc(niceDay(d.label)) + (isToday ? '<span class="today">HOY</span>' : '') + '</span><span class="count">' + d.trips.length + (d.trips.length === 1 ? ' viaje' : ' viajes') + '</span></summary><div class="inner">' + d.trips.map(card).join('') + '</div></details>';
+    });
+    return h;
+  }
+  function renderPago() {
+    var p = DATA.pay;
+    var h = '<div class="pay"><div class="k">Próximo pago</div><div class="amt">$' + Number(p.amount).toLocaleString('en-US') + '</div>' +
+      '<span class="pill ' + (p.paid ? 'done' : 'wait') + '">' + (p.paid ? '✓ Pagado el ' : '🗓 Se paga el ') + esc(p.sendOn) + '</span>' +
+      '<div class="k" style="margin-top:12px">Semana del ' + esc(p.label) + '</div></div>';
+    if (!p.days.length) return h + '<div class="empty" style="margin-top:14px">No tuviste viajes esa semana.</div>';
+    h += '<h2>Viajes incluidos · ' + mi(p.miles) + '</h2><div class="list">';
+    p.days.forEach(function (d) {
+      h += '<div class="d">' + esc(niceDay(d.label)) + '</div>';
+      d.trips.forEach(function (t) { h += '<div class="r"><span>' + esc(t.time) + ' · ' + esc(nice(t.name)) + '</span><span>' + mi(t.miles) + '</span></div>'; });
+    });
+    return h + '</div>';
+  }
+  function render() {
+    document.querySelectorAll('nav button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === VIEW); });
+    if (!DATA) return;
+    var html = VIEW === 'semana' ? renderSemana() : VIEW === 'pago' ? renderPago() : renderHoy();
+    document.getElementById('main').innerHTML = html + '<div class="upd">Actualizado ' + esc(DATA.now) + '</div>';
+    window.scrollTo(0, 0);
+  }
+  function show(d) {
+    if (d && d.error) { document.getElementById('main').innerHTML = '<div class="card msg">' + esc(d.error) + '</div>'; document.getElementById('fecha').textContent = ''; return; }
+    DATA = d;
+    document.getElementById('hola').textContent = '¡Hola, ' + d.driver + '!';
+    document.getElementById('fecha').textContent = cap(d.today.label.split(' ')[0]) + ', ' + d.today.label.split(' ')[1];
+    render();
+  }
+  function load() {
+    var r = document.getElementById('refresh'); r.classList.add('spin');
+    if (!KEY) { r.classList.remove('spin'); show({ error: 'Abre tu enlace personal una vez para activar la app. Pídeselo a Alec.' }); return; }
+    fetch(API + '?api=1&k=' + encodeURIComponent(KEY)).then(function (res) { return res.json(); }).then(function (d) {
+      r.classList.remove('spin');
+      try { if (!d.error) localStorage.setItem('atc_data', JSON.stringify(d)); } catch (e) {}
+      show(d);
+    }).catch(function () {
+      r.classList.remove('spin');
+      if (!DATA) document.getElementById('main').innerHTML = '<div class="card msg">No se pudieron cargar los viajes. Revisa tu conexión y toca ↻.</div>';
+    });
+  }
+  try { var cached = localStorage.getItem('atc_data'); if (cached && KEY) DATA = JSON.parse(cached); } catch (e) {}
+  document.querySelectorAll('nav button').forEach(function (b) {
+    b.addEventListener('click', function () { VIEW = b.dataset.v; try { localStorage.setItem('atc_view', VIEW); } catch (e) {} render(); });
+  });
+  document.getElementById('refresh').addEventListener('click', load);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) load(); });
+  setInterval(load, 5 * 60 * 1000);
+  if (DATA) show(DATA); else render();
+  load();
+</script>
+</body>
+</html>
