@@ -6,6 +6,16 @@
 <title>ATC</title>
 <meta name="theme-color" content="#4f6b2c">
 <link rel="manifest" href="manifest.webmanifest">
+<script>
+(function(){try{
+  var k=new URLSearchParams(location.search).get('k')||localStorage.getItem('atc_key');
+  if(!k||!/iPhone|iPad|iPod/.test(navigator.userAgent))return;
+  var b='https://alightransportcorp.github.io/atc/';
+  var m={name:'ATC',short_name:'ATC',start_url:b+'?k='+encodeURIComponent(k),scope:b,display:'standalone',background_color:'#1c210e',theme_color:'#4f6b2c',lang:'en',
+    icons:[{src:b+'icon-192.png',sizes:'192x192',type:'image/png'},{src:b+'icon-512.png',sizes:'512x512',type:'image/png'}]};
+  document.querySelector('link[rel=manifest]').href='data:application/manifest+json,'+encodeURIComponent(JSON.stringify(m));
+}catch(e){}})();
+</script>
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -220,13 +230,25 @@
   function render() {
     chrome();
     if (!DATA) return;
+    if (DATA.nokey) {
+      document.getElementById('main').innerHTML = '<div class="card msg">' + esc(L().noKey) +
+        '<div style="margin-top:14px;display:flex;gap:8px"><input id="keyin" placeholder="' + (LANG === 'es' ? 'Pega tu enlace aquí' : 'Paste your link here') +
+        '" style="flex:1;min-width:0;padding:12px;border-radius:12px;border:1px solid #d8cfb2;font:inherit;background:#fff">' +
+        '<button id="keygo" style="padding:12px 16px;border:0;border-radius:12px;background:#4f6b2c;color:#fff;font:inherit;font-weight:700">OK</button></div></div>';
+      document.getElementById('keygo').onclick = function () {
+        var v = document.getElementById('keyin').value.trim(), m = v.match(/[?&]k=([A-Za-z0-9]+)/);
+        KEY = m ? m[1] : (/^[A-Za-z0-9]{16,}$/.test(v) ? v : '');
+        if (KEY) { store('atc_key', KEY); DATA = null; load(); }
+      };
+      return;
+    }
     if (DATA.error) { document.getElementById('main').innerHTML = '<div class="card msg">' + esc(DATA.error) + '</div>'; return; }
     var html = VIEW === 'semana' ? renderSemana() : VIEW === 'pago' ? renderPago() : renderHoy();
     document.getElementById('main').innerHTML = html + '<div class="upd">' + L().updated + esc(DATA.now) + '</div>';
   }
   function load() {
     var r = document.getElementById('refresh'); r.classList.add('spin');
-    if (!KEY) { r.classList.remove('spin'); DATA = { error: L().noKey }; render(); return; }
+    if (!KEY) { r.classList.remove('spin'); DATA = { error: 'nokey', nokey: true }; render(); return; }
     fetch(API + '?api=1&k=' + encodeURIComponent(KEY)).then(function (res) { return res.json(); }).then(function (d) {
       r.classList.remove('spin');
       if (!d.error) store('atc_data', JSON.stringify(d));
