@@ -68,9 +68,20 @@
   .hola { font-size:22px; font-weight:800; color:var(--cream); }
   .fecha { font-size:13px; opacity:.8; margin-top:2px; }
   .tools { display:flex; align-items:center; gap:8px; flex:none; }
-  .lang { display:flex; background:rgba(255,242,204,.18); border-radius:999px; padding:3px; }
-  .lang button { border:0; background:none; color:var(--cream); font-weight:800; font-size:12px; padding:6px 9px; border-radius:999px; }
-  .lang button.on { background:var(--cream); color:var(--brand); }
+  header { position:relative; z-index:20; }
+  .gear { display:flex; align-items:center; justify-content:center; padding:0; }
+  .gear svg { transition:transform .25s; }
+  .gear.open { background:var(--cream); color:var(--brand); }
+  .gear.open svg { transform:rotate(60deg); }
+  .setpanel { position:absolute; top:calc(100% - 6px); right:max(16px, calc((100% - 640px) / 2)); width:min(300px, calc(100% - 32px)); background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:18px; box-shadow:0 12px 32px rgba(0,0,0,.25); padding:14px; box-sizing:border-box; }
+  .setpanel[hidden] { display:none; }
+  .stitle { font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0 2px 10px; }
+  .srow { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+  .srow:first-of-type { margin-top:0; }
+  .srow > span { font-size:14px; font-weight:700; margin-left:2px; }
+  .seg { display:flex; background:var(--pendbg); border-radius:12px; padding:3px; }
+  .seg button { flex:1; border:0; background:none; color:var(--ink); font:inherit; font-weight:700; font-size:14px; padding:9px 6px; border-radius:10px; }
+  .seg button.on { background:var(--brand); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.15); }
   .refresh { background:rgba(255,242,204,.18); border:0; color:var(--cream); width:40px; height:40px; border-radius:50%; font-size:18px; }
   .refresh.spin { animation:rot .9s linear infinite; }
   @keyframes rot { to { transform:rotate(360deg); } }
@@ -169,10 +180,14 @@
       <div><div class="hola" id="hola">ATC</div><div class="fecha" id="fecha"></div></div>
     </div>
     <div class="tools">
-      <div class="lang"><button type="button" data-l="en">EN</button><button type="button" data-l="es">ES</button></div>
-      <button class="refresh" id="theme" type="button" aria-label="Dark or light mode">🌙</button>
+      <button class="refresh gear" id="gear" type="button" aria-label="Settings" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
       <button class="refresh" id="refresh" type="button" aria-label="Refresh">↻</button>
     </div>
+  </div>
+  <div class="setpanel" id="setpanel" hidden>
+    <div class="stitle" id="lblSet">Settings</div>
+    <div class="srow"><span id="lblLang">Language</span><div class="seg lang"><button type="button" data-l="en">English</button><button type="button" data-l="es">Español</button></div></div>
+    <div class="srow"><span id="lblTheme">Appearance</span><div class="seg" id="themeseg"><button type="button" data-th="light">☀️ <span id="lblLight">Light</span></button><button type="button" data-th="dark">🌙 <span id="lblDark">Dark</span></button></div></div>
   </div>
   <div style="text-align:center"><button class="install" id="install" type="button"></button></div>
 </header>
@@ -427,6 +442,9 @@
     document.documentElement.lang = cur;
     document.querySelectorAll('[data-t]').forEach(function (e) { e.textContent = L()[e.dataset.t]; });
     document.querySelectorAll('.lang button').forEach(function (b) { b.classList.toggle('on', b.dataset.l === cur); });
+    var es = cur === 'es', tx = { lblSet: es ? 'Ajustes' : 'Settings', lblLang: es ? 'Idioma' : 'Language', lblTheme: es ? 'Apariencia' : 'Appearance', lblLight: es ? 'Claro' : 'Light', lblDark: es ? 'Oscuro' : 'Dark' };
+    Object.keys(tx).forEach(function (id) { var e = document.getElementById(id); if (e) e.textContent = tx[id]; });
+    document.getElementById('gear').setAttribute('aria-label', tx.lblSet);
     var adm = !!(DATA && DATA.admin);
     document.querySelectorAll('nav button').forEach(function (b) {
       var isAdm = b.classList.contains('adm'), hideForAdm = b.dataset.v === 'semana' || b.dataset.v === 'pago';
@@ -488,12 +506,20 @@
   function applyTheme() {
     var t = store('atc_theme') || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     document.documentElement.setAttribute('data-theme', t);
-    document.getElementById('theme').textContent = t === 'dark' ? '☀️' : '🌙';
+    document.querySelectorAll('#themeseg button').forEach(function (b) { b.classList.toggle('on', b.dataset.th === t); });
     var mc = document.querySelector('meta[name=theme-color]'); if (mc) mc.setAttribute('content', t === 'dark' ? '#3f5a22' : '#4f6b2c');
   }
-  document.getElementById('theme').addEventListener('click', function () {
-    store('atc_theme', document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); applyTheme();
+  document.querySelectorAll('#themeseg button').forEach(function (b) {
+    b.addEventListener('click', function () { store('atc_theme', b.dataset.th); applyTheme(); });
   });
+  (function () {
+    var gear = document.getElementById('gear'), panel = document.getElementById('setpanel');
+    function setOpen(o) { panel.hidden = !o; gear.classList.toggle('open', o); gear.setAttribute('aria-expanded', o ? 'true' : 'false'); }
+    gear.addEventListener('click', function (e) { e.stopPropagation(); setOpen(panel.hidden); });
+    panel.addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', function () { if (!panel.hidden) setOpen(false); });
+    document.getElementById('scroller').addEventListener('scroll', function () { if (!panel.hidden) setOpen(false); }, { passive: true });
+  })();
   applyTheme();
   document.getElementById('main').addEventListener('click', function (e) {
     var chip = e.target.closest && e.target.closest('.chip');
