@@ -22,15 +22,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>
 (function () {
-  // iPhone home-screen apps report a height that is short by the status bar; use the real screen height there.
+  // On iPhone home-screen apps the page area stops short of the screen bottom; the strip below it
+  // can only show the page background, so we paint that strip in the tab bar's color.
   function fit() {
-    var h = window.innerHeight;
+    var short = false;
     if (window.navigator.standalone) {
       var portrait = window.innerWidth < window.innerHeight;
       var sh = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
-      if (sh > h) h = sh;
+      short = sh - window.innerHeight > 20;
     }
-    document.documentElement.style.setProperty('--appH', h + 'px');
+    document.documentElement.classList.toggle('ios-short', short);
   }
   fit();
   window.addEventListener('resize', fit);
@@ -42,19 +43,21 @@
     --bg:#f7f2e2; --card:#fffdf7; --ink:#2a2e1f; --muted:#7a7a62; --line:#ece4cc;
     --brand:#4f6b2c; --brand2:#6b8a3a; --accent:#5b8a43; --accentbg:#eaf2dc; --cream:#fff2cc;
     --ret:#e8590c; --retbg:#fff1e6; --warn:#b45309; --warnbg:#fff7e0; --link:#4f6b2c;
-    --bink:#4f6b2c; --navbg:rgba(255,253,247,.97); --navon:#fff2cc; --hl:#fff2cc; --pendbg:#f1ecdc; --pendfg:#7a6a3a; --pubg:#fff1c2; --pufg:#7a5200; --shadow:rgba(79,107,44,.08);
+    --bink:#4f6b2c; --navbg:rgba(255,253,247,.97); --navsolid:#fffdf7; --navon:#fff2cc; --hl:#fff2cc; --pendbg:#f1ecdc; --pendfg:#7a6a3a; --pubg:#fff1c2; --pufg:#7a5200; --shadow:rgba(79,107,44,.08);
   }
   :root[data-theme=dark] {
     --bg:#12150c; --card:#1d2215; --ink:#eceedf; --muted:#a2a587; --line:#2d3420;
     --brand:#3f5a22; --brand2:#56742f; --accent:#7fae5c; --accentbg:#2a3a1c;
     --ret:#ff8a4c; --retbg:#3a2416; --warn:#f0b35a; --warnbg:#3a2e14; --link:#c3dc93;
-    --bink:#c3dc93; --navbg:rgba(24,28,17,.97); --navon:#2a3a1c; --hl:#2a3320; --pendbg:#2e2c20; --pendfg:#d8cca0; --pubg:#3d3314; --pufg:#ffd77a; --shadow:rgba(0,0,0,.35);
+    --bink:#c3dc93; --navbg:rgba(24,28,17,.97); --navsolid:#181c11; --navon:#2a3a1c; --hl:#2a3320; --pendbg:#2e2c20; --pendfg:#d8cca0; --pubg:#3d3314; --pufg:#ffd77a; --shadow:rgba(0,0,0,.35);
   }
   :root[data-theme=dark] .go { background:#2e3322; }
   :root[data-theme=dark] .empty, :root[data-theme=dark] .card, :root[data-theme=dark] .stat, :root[data-theme=dark] .kpi { box-shadow:0 2px 10px var(--shadow); }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; overflow:hidden; overscroll-behavior:none; }
-  body { display:flex; flex-direction:column; position:fixed; top:0; right:0; left:0; height:var(--appH, 100%); }
+  body { display:flex; flex-direction:column; position:fixed; top:0; right:0; bottom:0; left:0; height:auto; background:var(--bg); }
+  html.ios-short { background:var(--navsolid) !important; }
+  html.ios-short nav { padding-bottom:8px; background:var(--navsolid); }
   header { flex:none; }
   #scroller { flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
   html,body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
