@@ -169,6 +169,7 @@
   .pay { background:linear-gradient(160deg,var(--brand),var(--brand2)); color:#fff; border-radius:20px; padding:20px; text-align:center; box-shadow:0 4px 16px rgba(79,107,44,.2); }
   .pay .k { font-size:13px; opacity:.8; text-transform:uppercase; letter-spacing:.6px; }
   .pay .amt { font-size:52px; font-weight:900; margin:6px 0; color:var(--cream); }
+  .cdone { flex:none; align-self:center; margin:0 -4px 0 0; padding:5px 10px; border-radius:999px; background:var(--accentbg); color:var(--bink); font-size:12px; font-weight:800; white-space:nowrap; }
   .pill { display:inline-block; border-radius:999px; padding:5px 12px; font-weight:800; font-size:13px; }
   .pill.wait { background:#ffd166; color:#5c3d00; } .pill.done { background:#7ee2b8; color:#063d26; }
   .list { background:var(--card); border-radius:16px; box-shadow:0 2px 10px rgba(79,107,44,.07); overflow:hidden; }
@@ -225,7 +226,7 @@
           install:'⬇ Install app', todayTag:'TODAY', noKey:'Open your personal link once to activate the app. Ask Alec for it.',
           offline:'Couldn\'t load your trips. Check your connection and tap ↻.',
           pickedBtn:'Picked up', droppedBtn:'Dropped off', confPU:'Confirm you picked up {n}?', confDO:'Confirm you dropped off {n}?',
-          undo:'Undo', confUndo:'Undo "{s}" for {n}? Tap it again once it actually happens.',
+          undo:'Undo', completed:'Completed', confUndo:'Undo "{s}" for {n}? Tap it again once it actually happens.',
           sendFail:'Couldn\'t send. Check your connection and try again.',
           days:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] },
     es: { tabToday:'Hoy', tabWeek:'Esta semana', tabPay:'Próximo pago', hi:'¡Hola, {n}!', loading:'Cargando tus viajes…', trip:'viaje', trips:'viajes', miles:'millas',
@@ -235,7 +236,7 @@
           install:'⬇ Instalar app', todayTag:'HOY', noKey:'Abre tu enlace personal una vez para activar la app. Pídeselo a Alec.',
           offline:'No se pudieron cargar los viajes. Revisa tu conexión y toca ↻.',
           pickedBtn:'Ya lo recogí', droppedBtn:'Ya lo dejé', confPU:'¿Confirmas que recogiste a {n}?', confDO:'¿Confirmas que dejaste a {n}?',
-          undo:'Deshacer', confUndo:'¿Deshacer "{s}" para {n}? Vuelve a marcarlo cuando de verdad pase.',
+          undo:'Deshacer', completed:'Completado', confUndo:'¿Deshacer "{s}" para {n}? Vuelve a marcarlo cuando de verdad pase.',
           sendFail:'No se pudo enviar. Revisa tu conexión e inténtalo de nuevo.',
           days:['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'] }
   };
@@ -332,7 +333,7 @@
   function card(t) {
     var legs = t.ida && t.regreso ? L().both : t.ida ? L().goOnly : L().retOnly;
     var id = cid(t), shut = COLLAPSED.indexOf(id) >= 0;
-    var h = '<div class="card' + (shut ? ' shut' : '') + '" data-cid="' + esc(id) + '"><div class="chead" role="button"><div class="time">' + esc(t.time) + '</div><div class="whobox"><div class="who">' + esc(nice(t.name)) + '</div><div class="sub">' + legs + ' · ' + mi(t.miles) + '</div></div><span class="chev">▾</span></div><div class="cbody">';
+    var h = '<div class="card' + (shut ? ' shut' : '') + '" data-cid="' + esc(id) + '"><div class="chead" role="button"><div class="time">' + esc(t.time) + '</div><div class="whobox"><div class="who">' + esc(nice(t.name)) + '</div><div class="sub">' + legs + ' · ' + mi(t.miles) + '</div></div>' + doneTag(t) + '<span class="chev">▾</span></div><div class="cbody">';
     var b = '';
     if (t.phone) b += '<a class="btn call" href="' + tel(t.phone) + '">' + L().call + '</a>';
     (t.family || []).forEach(function (f) { b += '<a class="btn" href="' + tel(f.phone) + '">📞 ' + esc(f.label) + '</a>'; });
@@ -374,6 +375,12 @@
     if (t.date > DATA.today.date) return '<span class="st pend">Scheduled</span>';
     return '<span class="st pend">⏳ Pending</span>';
   }
+  function isDone(t) {
+    var d = t.done || {}, n = 0;
+    ['ida', 'regreso'].forEach(function (k) { if (t[k]) { n++; if (!d[k + '_dropoff']) n = -99; } });
+    return n > 0;
+  }
+  function doneTag(t) { return isDone(t) ? '<span class="cdone">✓ ' + L().completed + '</span>' : ''; }
   function legRow(t, k) {
     var l = t[k]; if (!l) return '';
     var cls = k === 'ida' ? 'ida' : 'ret', tag = k === 'ida' ? 'GOING' : 'RETURN';
@@ -382,7 +389,7 @@
   }
   function tripRow(t) {
     var id = 'all|' + t.key + '|' + t.date, shut = COLLAPSED.indexOf(id) >= 0;
-    var h = '<div class="card' + (shut ? ' shut' : '') + '" data-cid="' + esc(id) + '"><div class="chead" role="button"><div class="time">' + esc(t.time) + '</div><div class="whobox"><div class="who">' + esc(nice(t.name)) + '</div><div class="sub">' + esc(t.src) + ' · ' + mi(t.miles) + '</div></div><span class="chev">▾</span></div><div class="cbody">';
+    var h = '<div class="card' + (shut ? ' shut' : '') + '" data-cid="' + esc(id) + '"><div class="chead" role="button"><div class="time">' + esc(t.time) + '</div><div class="whobox"><div class="who">' + esc(nice(t.name)) + '</div><div class="sub">' + esc(t.src) + ' · ' + mi(t.miles) + '</div></div>' + doneTag(t) + '<span class="chev">▾</span></div><div class="cbody">';
     if (t.notes) h += '<div class="note" style="margin:0 14px 10px">⚠️ ' + esc(t.notes) + '</div>';
     return h + legRow(t, 'ida') + legRow(t, 'regreso') + '</div></div>';
   }
