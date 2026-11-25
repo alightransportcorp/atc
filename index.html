@@ -76,6 +76,7 @@
   .setpanel { position:absolute; top:calc(100% - 6px); right:max(16px, calc((100% - 640px) / 2)); width:min(300px, calc(100% - 32px)); background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:18px; box-shadow:0 12px 32px rgba(0,0,0,.25); padding:14px; box-sizing:border-box; }
   .setpanel[hidden] { display:none; }
   .stitle { font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0 2px 10px; }
+  .srow[hidden] { display:none; }
   .srow { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
   .srow:first-of-type { margin-top:0; }
   .srow > span { font-size:14px; font-weight:700; margin-left:2px; }
@@ -147,11 +148,14 @@
   .chips { display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 6px; }
   .chip { border:0; border-radius:999px; padding:9px 16px; font:inherit; font-weight:800; font-size:14px; background:var(--card); color:var(--bink); box-shadow:0 2px 8px rgba(79,107,44,.08); }
   .chip.on { background:var(--brand); color:#fff; }
-  .chk { display:flex; gap:8px; margin-top:12px; }
+  .chk { display:flex; gap:8px; margin-top:12px; align-items:flex-start; }
   .chk button { flex:1; border:0; border-radius:12px; padding:12px 6px; font:inherit; font-weight:800; font-size:14px; background:var(--brand); color:#fff; cursor:pointer; }
   .chk button.ok { background:var(--accentbg); color:var(--bink); }
   .chk button.wait { opacity:.4; }
   .chk button.busy { opacity:.6; }
+  .chk .stp { flex:1; display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .chk .stp > button.mk { width:100%; }
+  .chk button.undo { background:none; color:var(--muted); font-size:13px; font-weight:700; padding:6px 4px; text-decoration:underline; text-underline-offset:3px; }
   .note { margin:0 14px 14px; background:var(--warnbg); color:var(--warn); border-radius:12px; padding:10px 12px; font-weight:700; font-size:14px; }
   .empty { background:var(--card); border-radius:18px; padding:26px 16px; text-align:center; color:var(--muted); box-shadow:0 2px 12px rgba(79,107,44,.06); }
   .empty .big { font-size:34px; }
@@ -197,6 +201,7 @@
     <div class="stitle" id="lblSet">Settings</div>
     <div class="srow"><span id="lblLang">Language</span><div class="seg lang"><button type="button" data-l="en">English</button><button type="button" data-l="es">Español</button></div></div>
     <div class="srow"><span id="lblTheme">Appearance</span><div class="seg" id="themeseg"><button type="button" data-th="light">☀️ <span id="lblLight">Light</span></button><button type="button" data-th="dark">🌙 <span id="lblDark">Dark</span></button></div></div>
+    <div class="srow" id="viewrow" hidden><span id="lblView">App view</span><div class="seg" id="modeseg"><button type="button" data-m="mecca">📊 Mecca</button><button type="button" data-m="emp">🚗 <span id="lblEmp">Employee</span></button></div></div>
   </div>
   <div style="text-align:center"><button class="install" id="install" type="button"></button></div>
 </header>
@@ -220,6 +225,7 @@
           install:'⬇ Install app', todayTag:'TODAY', noKey:'Open your personal link once to activate the app. Ask Alec for it.',
           offline:'Couldn\'t load your trips. Check your connection and tap ↻.',
           pickedBtn:'Picked up', droppedBtn:'Dropped off', confPU:'Confirm you picked up {n}?', confDO:'Confirm you dropped off {n}?',
+          undo:'Undo', confUndo:'Undo "{s}" for {n}? Tap it again once it actually happens.',
           sendFail:'Couldn\'t send. Check your connection and try again.',
           days:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] },
     es: { tabToday:'Hoy', tabWeek:'Esta semana', tabPay:'Próximo pago', hi:'¡Hola, {n}!', loading:'Cargando tus viajes…', trip:'viaje', trips:'viajes', miles:'millas',
@@ -229,6 +235,7 @@
           install:'⬇ Instalar app', todayTag:'HOY', noKey:'Abre tu enlace personal una vez para activar la app. Pídeselo a Alec.',
           offline:'No se pudieron cargar los viajes. Revisa tu conexión y toca ↻.',
           pickedBtn:'Ya lo recogí', droppedBtn:'Ya lo dejé', confPU:'¿Confirmas que recogiste a {n}?', confDO:'¿Confirmas que dejaste a {n}?',
+          undo:'Deshacer', confUndo:'¿Deshacer "{s}" para {n}? Vuelve a marcarlo cuando de verdad pase.',
           sendFail:'No se pudo enviar. Revisa tu conexión e inténtalo de nuevo.',
           days:['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'] }
   };
@@ -236,6 +243,8 @@
   var KEY = new URLSearchParams(location.search).get('k') || '';
   if (KEY) store('atc_key', KEY); else KEY = store('atc_key') || '';
   var LANG = store('atc_lang') || '';
+  var MODE = store('atc_mode') || 'mecca';
+  function isAdm() { return !!(DATA && DATA.admin) && MODE !== 'emp'; }
   var DATA = null, VIEW = store('atc_view') || 'hoy', RO = false, DRV = store('atc_drv') || '';
   var COLLAPSED = []; try { COLLAPSED = JSON.parse(store('atc_collapsed') || '[]') || []; } catch (e) { COLLAPSED = []; }
   function L() { return T[LANG || (DATA && DATA.lang) || 'en']; }
@@ -268,11 +277,13 @@
   function checks(t, k) {
     if (RO || !t.key || !DATA || !DATA.today || t.date !== DATA.today.date) return '';
     var d = t.done || {}, pu = d[k + '_pickup'], dr = d[k + '_dropoff'];
-    var b = function (step, label, at, wait) {
-      return '<button type="button" class="' + (at ? 'ok' : wait ? 'wait' : '') + '" data-trip="' + esc(t.key) + '" data-leg="' + k + '" data-step="' + step + '" data-name="' + esc(nice(t.name)) + '"' +
-        (at || wait ? ' disabled' : '') + '>' + (at ? '✓ ' + label + ' · ' + esc(at) : label) + '</button>';
+    var b = function (step, label, at, wait, canUndo) {
+      var data = ' data-trip="' + esc(t.key) + '" data-leg="' + k + '" data-step="' + step + '" data-name="' + esc(nice(t.name)) + '" data-label="' + esc(label) + '"';
+      return '<div class="stp"><button type="button" class="mk ' + (at ? 'ok' : wait ? 'wait' : '') + '"' + data +
+        (at || wait ? ' disabled' : '') + '>' + (at ? '✓ ' + label + ' · ' + esc(at) : label) + '</button>' +
+        (at && canUndo ? '<button type="button" class="undo"' + data + '>↩ ' + L().undo + '</button>' : '') + '</div>';
     };
-    return '<div class="chk">' + b('pickup', L().pickedBtn, pu, false) + b('dropoff', L().droppedBtn, dr, !pu) + '</div>';
+    return '<div class="chk">' + b('pickup', L().pickedBtn, pu, false, !dr) + b('dropoff', L().droppedBtn, dr, !pu, true) + '</div>';
   }
   function findTrip(key) {
     var all = [];
@@ -289,7 +300,31 @@
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (!res || !res.ok) throw new Error(res && res.error);
+        relayPush(res);
         findTrip(key).forEach(function (t) { t.done = t.done || {}; t.done[k + '_' + step] = res.at; });
+        store('atc_data', JSON.stringify(DATA)); render();
+      })
+      .catch(function () { btn.classList.remove('busy'); btn.disabled = false; alert(L().sendFail); });
+  }
+  function relayPush(res) {
+    // If the server couldn't reach the notification service, send the alert from this phone instead.
+    if (!res || !res.push) return;
+    var body = JSON.stringify(res.push), tries = 0;
+    (function go() {
+      fetch('https://ntfy.sh/', { method: 'POST', body: body }).then(function (r) { if (!r.ok) throw 0; })
+        .catch(function () { if (++tries < 3) setTimeout(go, 3000 * tries); });
+    })();
+  }
+  function undoStep(btn) {
+    var key = btn.getAttribute('data-trip'), k = btn.getAttribute('data-leg'), step = btn.getAttribute('data-step');
+    if (!confirm(L().confUndo.replace('{s}', btn.getAttribute('data-label')).replace('{n}', btn.getAttribute('data-name')))) return;
+    btn.classList.add('busy'); btn.disabled = true;
+    fetch(API + '?api=1&act=unmark&k=' + encodeURIComponent(KEY) + '&trip=' + encodeURIComponent(key) + '&leg=' + k + '&step=' + step)
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (!res || !res.ok) throw new Error(res && res.error);
+        relayPush(res);
+        findTrip(key).forEach(function (t) { if (!t.done) return; delete t.done[k + '_' + step]; if (step === 'pickup') delete t.done[k + '_dropoff']; });
         store('atc_data', JSON.stringify(DATA)); render();
       })
       .catch(function () { btn.classList.remove('busy'); btn.disabled = false; alert(L().sendFail); });
@@ -457,10 +492,12 @@
     document.documentElement.lang = cur;
     document.querySelectorAll('[data-t]').forEach(function (e) { e.textContent = L()[e.dataset.t]; });
     document.querySelectorAll('.lang button').forEach(function (b) { b.classList.toggle('on', b.dataset.l === cur); });
-    var es = cur === 'es', tx = { lblSet: es ? 'Ajustes' : 'Settings', lblLang: es ? 'Idioma' : 'Language', lblTheme: es ? 'Apariencia' : 'Appearance', lblLight: es ? 'Claro' : 'Light', lblDark: es ? 'Oscuro' : 'Dark' };
+    var es = cur === 'es', tx = { lblSet: es ? 'Ajustes' : 'Settings', lblLang: es ? 'Idioma' : 'Language', lblTheme: es ? 'Apariencia' : 'Appearance', lblLight: es ? 'Claro' : 'Light', lblDark: es ? 'Oscuro' : 'Dark', lblView: es ? 'Vista de la app' : 'App view', lblEmp: es ? 'Empleado' : 'Employee' };
     Object.keys(tx).forEach(function (id) { var e = document.getElementById(id); if (e) e.textContent = tx[id]; });
     document.getElementById('gear').setAttribute('aria-label', tx.lblSet);
-    var adm = !!(DATA && DATA.admin);
+    var adm = isAdm();
+    var vr = document.getElementById('viewrow'); if (vr) vr.hidden = !(DATA && DATA.admin);
+    document.querySelectorAll('#modeseg button').forEach(function (b) { b.classList.toggle('on', b.dataset.m === MODE); });
     document.querySelectorAll('nav button').forEach(function (b) {
       var isAdm = b.classList.contains('adm'), hideForAdm = b.dataset.v === 'semana' || b.dataset.v === 'pago';
       b.style.display = adm ? (hideForAdm ? 'none' : 'block') : (isAdm ? 'none' : 'block');
@@ -492,11 +529,11 @@
     if (DATA.error) { document.getElementById('main').innerHTML = '<div class="card msg">' + esc(DATA.error) + '</div>'; return; }
     var adminViews = { trips: renderTrips, money: renderMoney, payouts: renderPayouts, drivers: renderDrivers };
     var V = VIEW;
-    if (adminViews[V] && !DATA.admin) V = 'hoy';
-    if (DATA.admin && (V === 'semana' || V === 'pago')) V = 'hoy';
-    if (DATA.admin && DATA.adminError && VIEW !== 'hoy') { document.getElementById('main').innerHTML = '<div class="card msg">Couldn\'t load this tab: ' + esc(DATA.adminError) + '</div>'; return; }
+    if (adminViews[V] && !isAdm()) V = 'hoy';
+    if (isAdm() && (V === 'semana' || V === 'pago')) V = 'hoy';
+    if (isAdm() && DATA.adminError && VIEW !== 'hoy') { document.getElementById('main').innerHTML = '<div class="card msg">Couldn\'t load this tab: ' + esc(DATA.adminError) + '</div>'; return; }
     chrome();
-    var html = adminViews[V] && DATA.admin ? adminViews[V]() : V === 'semana' ? renderSemana() : V === 'pago' ? renderPago() : renderHoy();
+    var html = adminViews[V] && isAdm() ? adminViews[V]() : V === 'semana' ? renderSemana() : V === 'pago' ? renderPago() : renderHoy();
     document.getElementById('main').innerHTML = html + '<div class="upd">' + L().updated + esc(DATA.now) + '</div>';
   }
   function load() {
@@ -524,6 +561,9 @@
     document.querySelectorAll('#themeseg button').forEach(function (b) { b.classList.toggle('on', b.dataset.th === t); });
     var mc = document.querySelector('meta[name=theme-color]'); if (mc) mc.setAttribute('content', t === 'dark' ? '#3f5a22' : '#4f6b2c');
   }
+  document.querySelectorAll('#modeseg button').forEach(function (b) {
+    b.addEventListener('click', function () { MODE = b.dataset.m; store('atc_mode', MODE); document.getElementById('scroller').scrollTop = 0; render(); });
+  });
   document.querySelectorAll('#themeseg button').forEach(function (b) {
     b.addEventListener('click', function () { store('atc_theme', b.dataset.th); applyTheme(); });
   });
@@ -540,7 +580,7 @@
     var chip = e.target.closest && e.target.closest('.chip');
     if (chip) { DRV = chip.getAttribute('data-drv'); store('atc_drv', DRV); render(); return; }
     var mk = e.target.closest && e.target.closest('.chk button');
-    if (mk) { if (!mk.disabled) markStep(mk); return; }
+    if (mk) { if (!mk.disabled) { if (mk.classList.contains('undo')) undoStep(mk); else markStep(mk); } return; }
     var hd = e.target.closest && e.target.closest('.chead'); if (!hd) return;
     var c = hd.parentNode, id = c.getAttribute('data-cid'), i = COLLAPSED.indexOf(id);
     c.classList.toggle('shut');
