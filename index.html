@@ -394,10 +394,9 @@
     return h + legRow(t, 'ida') + legRow(t, 'regreso') + '</div></div>';
   }
   function renderTrips() {
-    var a = DATA.all, t = a.today, legs = 0, done = 0;
-    t.forEach(function (x) { ['ida', 'regreso'].forEach(function (k) { if (x[k]) { legs++; if ((x.done || {})[k + '_dropoff']) done++; } }); });
+    var a = DATA.all, t = a.today, done = t.filter(isDone).length;
     var miles = t.reduce(function (s, x) { return s + x.miles; }, 0);
-    var h = '<div class="kpis"><div class="kpi"><b>' + t.length + '</b><span>Trips</span></div><div class="kpi"><b>' + done + '/' + legs + '</b><span>Legs done</span></div><div class="kpi"><b>' + (Math.round(miles * 10) / 10) + '</b><span>Miles</span></div></div>';
+    var h = '<div class="kpis"><div class="kpi"><b>' + t.length + '</b><span>Trips</span></div><div class="kpi"><b>' + done + '/' + t.length + '</b><span>Trips completed</span></div><div class="kpi"><b>' + (Math.round(miles * 10) / 10) + '</b><span>Miles</span></div></div>';
     h += '<h2>Today · ' + esc(niceDay(DATA.today.date)) + '</h2>';
     h += t.length ? t.map(tripRow).join('') : '<div class="empty">No trips today.</div>';
     h += '<details class="day"><summary><span>Tomorrow · ' + esc(niceDay(a.tomorrowDate)) + '</span><span class="count">' + a.tomorrow.length + ' trips</span></summary><div class="inner">' +
