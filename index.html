@@ -154,6 +154,8 @@
   .chk button.ok { background:var(--accentbg); color:var(--bink); }
   .chk button.wait { opacity:.4; }
   .chk button.busy { opacity:.6; }
+  .achk .chk { margin:0; padding:0 14px 12px; }
+  .achk .chk button.mk { padding:9px 6px; font-size:13px; }
   .chk .stp { flex:1; display:flex; flex-direction:column; gap:2px; min-width:0; }
   .chk .stp > button.mk { width:100%; }
   .chk button.undo { background:none; color:var(--muted); font-size:13px; font-weight:700; padding:6px 4px; text-decoration:underline; text-underline-offset:3px; }
@@ -276,11 +278,12 @@
       (RO ? ' ' + stat(t, k) : '') +
       stop('from', L().pickup, l.from, l.fromCsz, l.fromMap) + stop('to', L().dropoff, l.to, l.toCsz, l.toMap) + checks(t, k) + '</div>';
   }
-  function checks(t, k) {
+  function checks(t, k, admDrv) {
     if (RO || !t.key || !DATA || !DATA.today || t.date !== DATA.today.date) return '';
     var d = t.done || {}, pu = d[k + '_pickup'], dr = d[k + '_dropoff'];
     var b = function (step, label, at, wait, canUndo) {
-      var data = ' data-trip="' + esc(t.key) + '" data-leg="' + k + '" data-step="' + step + '" data-name="' + esc(nice(t.name)) + '" data-label="' + esc(label) + '"';
+      var data = ' data-trip="' + esc(t.key) + '" data-leg="' + k + '" data-step="' + step + '" data-name="' + esc(nice(t.name)) + '" data-label="' + esc(label) + '"' +
+        (admDrv ? ' data-adm="' + esc(admDrv) + '" data-date="' + esc(t.date) + '" data-pname="' + esc(t.name) + '"' : '');
       return '<div class="stp"><button type="button" class="mk ' + (at ? 'ok' : wait ? 'wait' : '') + '"' + data +
         (at || wait ? ' disabled' : '') + '>' + (at ? '✓ ' + label + ' · ' + esc(at) : label) + '</button>' +
         (at && canUndo ? '<button type="button" class="undo"' + data + '>↩ ' + L().undo + '</button>' : '') + '</div>';
@@ -292,13 +295,18 @@
     if (DATA.today) all = all.concat(DATA.today.trips);
     if (DATA.tomorrow) all = all.concat(DATA.tomorrow.trips);
     if (DATA.week) DATA.week.days.forEach(function (d) { all = all.concat(d.trips); });
+    if (DATA.all) all = all.concat(DATA.all.today || [], DATA.all.tomorrow || []);
     return all.filter(function (t) { return t.key === key; });
+  }
+  function admQ(btn) {
+    var a = btn.getAttribute('data-adm');
+    return a ? '&drv=' + encodeURIComponent(a) + '&date=' + encodeURIComponent(btn.getAttribute('data-date')) + '&name=' + encodeURIComponent(btn.getAttribute('data-pname')) : '';
   }
   function markStep(btn) {
     var key = btn.getAttribute('data-trip'), k = btn.getAttribute('data-leg'), step = btn.getAttribute('data-step');
     if (!confirm((step === 'pickup' ? L().confPU : L().confDO).replace('{n}', btn.getAttribute('data-name')))) return;
     btn.classList.add('busy'); btn.disabled = true;
-    fetch(API + '?api=1&act=mark&k=' + encodeURIComponent(KEY) + '&trip=' + encodeURIComponent(key) + '&leg=' + k + '&step=' + step)
+    fetch(API + '?api=1&act=' + (btn.getAttribute('data-adm') ? 'amark' : 'mark') + '&k=' + encodeURIComponent(KEY) + '&trip=' + encodeURIComponent(key) + '&leg=' + k + '&step=' + step + admQ(btn))
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (!res || !res.ok) throw new Error(res && res.error);
@@ -321,7 +329,7 @@
     var key = btn.getAttribute('data-trip'), k = btn.getAttribute('data-leg'), step = btn.getAttribute('data-step');
     if (!confirm(L().confUndo.replace('{s}', btn.getAttribute('data-label')).replace('{n}', btn.getAttribute('data-name')))) return;
     btn.classList.add('busy'); btn.disabled = true;
-    fetch(API + '?api=1&act=unmark&k=' + encodeURIComponent(KEY) + '&trip=' + encodeURIComponent(key) + '&leg=' + k + '&step=' + step)
+    fetch(API + '?api=1&act=' + (btn.getAttribute('data-adm') ? 'aunmark' : 'unmark') + '&k=' + encodeURIComponent(KEY) + '&trip=' + encodeURIComponent(key) + '&leg=' + k + '&step=' + step + admQ(btn))
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (!res || !res.ok) throw new Error(res && res.error);
@@ -386,7 +394,8 @@
     var l = t[k]; if (!l) return '';
     var cls = k === 'ida' ? 'ida' : 'ret', tag = k === 'ida' ? 'GOING' : 'RETURN';
     var drv = l.driver ? esc(l.driver) : '<span class="st na">Unassigned</span>';
-    return '<div class="lrow ' + cls + '"><span class="legtag">' + tag + '</span><span class="drv">' + drv + '<div class="rt">' + esc(l.from) + ' → ' + esc(l.to) + ' · ' + mi(l.miles) + '</div></span>' + stat(t, k) + '</div>';
+    return '<div class="lrow ' + cls + '"><span class="legtag">' + tag + '</span><span class="drv">' + drv + '<div class="rt">' + esc(l.from) + ' → ' + esc(l.to) + ' · ' + mi(l.miles) + '</div></span>' + stat(t, k) + '</div>' +
+      (l.driver ? '<div class="achk">' + checks(t, k, l.driver) + '</div>' : '');
   }
   function tripRow(t) {
     var id = 'all|' + t.key + '|' + t.date, shut = COLLAPSED.indexOf(id) >= 0;
