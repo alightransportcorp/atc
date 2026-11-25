@@ -154,6 +154,15 @@
   .chk button.ok { background:var(--accentbg); color:var(--bink); }
   .chk button.wait { opacity:.4; }
   .chk button.busy { opacity:.6; }
+  #askbg { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:24px; z-index:99; }
+  #askbg[hidden] { display:none; }
+  #askbox { background:var(--card,#fff); color:var(--ink,#222); border-radius:16px; padding:20px; max-width:340px; width:100%; box-shadow:0 10px 40px rgba(0,0,0,.3); }
+  #askmsg { font-size:16px; font-weight:700; line-height:1.35; margin-bottom:16px; }
+  #askbtns { display:flex; gap:10px; }
+  #askbtns button { flex:1; border:0; border-radius:12px; padding:13px 6px; font:inherit; font-weight:800; font-size:15px; cursor:pointer; }
+  #askno { background:var(--accentbg); color:var(--bink); }
+  #askyes { background:var(--brand); color:#fff; }
+  #askno[hidden] { display:none; }
   .achk .chk { margin:0; padding:0 14px 12px; }
   .achk .chk button.mk { padding:9px 6px; font-size:13px; }
   .chk .stp { flex:1; display:flex; flex-direction:column; gap:2px; min-width:0; }
@@ -228,7 +237,7 @@
           nextPay:'Next payment', paysOn:'🗓 Pays on ', paidOn:'✓ Paid on ', included:'Trips included', noPayWeek:'No trips that week.', updated:'Updated ',
           install:'⬇ Install app', todayTag:'TODAY', noKey:'Open your personal link once to activate the app. Ask Alec for it.',
           offline:'Couldn\'t load your trips. Check your connection and tap ↻.',
-          pickedBtn:'Picked up', droppedBtn:'Dropped off', confPU:'Confirm you picked up {n}?', confDO:'Confirm you dropped off {n}?',
+          pickedBtn:'Picked up', droppedBtn:'Dropped off', confPU:'Confirm you picked up {n}?', confDO:'Confirm you dropped off {n}?', yes:'Yes', cancel:'Cancel', okBtn:'OK', puFirst:'Tap "Picked up" first, then "Dropped off".',
           undo:'Undo', completed:'Completed', confUndo:'Undo "{s}" for {n}? Tap it again once it actually happens.',
           sendFail:'Couldn\'t send. Check your connection and try again.',
           days:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] },
@@ -238,7 +247,7 @@
           nextPay:'Próximo pago', paysOn:'🗓 Se paga el ', paidOn:'✓ Pagado el ', included:'Viajes incluidos', noPayWeek:'No tuviste viajes esa semana.', updated:'Actualizado ',
           install:'⬇ Instalar app', todayTag:'HOY', noKey:'Abre tu enlace personal una vez para activar la app. Pídeselo a Alec.',
           offline:'No se pudieron cargar los viajes. Revisa tu conexión y toca ↻.',
-          pickedBtn:'Ya lo recogí', droppedBtn:'Ya lo dejé', confPU:'¿Confirmas que recogiste a {n}?', confDO:'¿Confirmas que dejaste a {n}?',
+          pickedBtn:'Ya lo recogí', droppedBtn:'Ya lo dejé', confPU:'¿Confirmas que recogiste a {n}?', confDO:'¿Confirmas que dejaste a {n}?', yes:'Sí', cancel:'Cancelar', okBtn:'OK', puFirst:'Primero toca "Ya lo recogí" y después "Ya lo dejé".',
           undo:'Deshacer', completed:'Completado', confUndo:'¿Deshacer "{s}" para {n}? Vuelve a marcarlo cuando de verdad pase.',
           sendFail:'No se pudo enviar. Revisa tu conexión e inténtalo de nuevo.',
           days:['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'] }
@@ -285,7 +294,7 @@
       var data = ' data-trip="' + esc(t.key) + '" data-leg="' + k + '" data-step="' + step + '" data-name="' + esc(nice(t.name)) + '" data-label="' + esc(label) + '"' +
         (admDrv ? ' data-adm="' + esc(admDrv) + '" data-date="' + esc(t.date) + '" data-pname="' + esc(t.name) + '"' : '');
       return '<div class="stp"><button type="button" class="mk ' + (at ? 'ok' : wait ? 'wait' : '') + '"' + data +
-        (at || wait ? ' disabled' : '') + '>' + (at ? '✓ ' + label + ' · ' + esc(at) : label) + '</button>' +
+        (at ? ' disabled' : '') + '>' + (at ? '✓ ' + label + ' · ' + esc(at) : label) + '</button>' +
         (at && canUndo ? '<button type="button" class="undo"' + data + '>↩ ' + L().undo + '</button>' : '') + '</div>';
     };
     return '<div class="chk">' + b('pickup', L().pickedBtn, pu, false, !dr) + b('dropoff', L().droppedBtn, dr, !pu, true) + '</div>';
@@ -302,9 +311,27 @@
     var a = btn.getAttribute('data-adm');
     return a ? '&drv=' + encodeURIComponent(a) + '&date=' + encodeURIComponent(btn.getAttribute('data-date')) + '&name=' + encodeURIComponent(btn.getAttribute('data-pname')) : '';
   }
+  // In-app confirm/alert box (phone browsers can silently block confirm() pop-ups).
+  function ask(msg, cb, alertOnly) {
+    var bg = document.getElementById('askbg');
+    if (!bg) {
+      bg = document.createElement('div'); bg.id = 'askbg'; bg.hidden = true;
+      bg.innerHTML = '<div id="askbox" role="dialog"><div id="askmsg"></div><div id="askbtns"><button type="button" id="askno"></button><button type="button" id="askyes"></button></div></div>';
+      document.body.appendChild(bg);
+    }
+    document.getElementById('askmsg').textContent = msg;
+    var no = document.getElementById('askno'), yes = document.getElementById('askyes');
+    no.textContent = L().cancel; yes.textContent = alertOnly ? L().okBtn : L().yes; no.hidden = !!alertOnly;
+    var done = function (v) { bg.hidden = true; no.onclick = yes.onclick = bg.onclick = null; if (v && cb) cb(); };
+    no.onclick = function (e) { e.stopPropagation(); done(false); };
+    yes.onclick = function (e) { e.stopPropagation(); done(true); };
+    bg.onclick = function (e) { if (e.target === bg) done(false); };
+    bg.hidden = false;
+  }
   function markStep(btn) {
     var key = btn.getAttribute('data-trip'), k = btn.getAttribute('data-leg'), step = btn.getAttribute('data-step');
-    if (!confirm((step === 'pickup' ? L().confPU : L().confDO).replace('{n}', btn.getAttribute('data-name')))) return;
+    if (btn.classList.contains('wait')) { ask(L().puFirst, null, true); return; }
+    ask((step === 'pickup' ? L().confPU : L().confDO).replace('{n}', btn.getAttribute('data-name')), function () {
     btn.classList.add('busy'); btn.disabled = true;
     fetch(API + '?api=1&act=' + (btn.getAttribute('data-adm') ? 'amark' : 'mark') + '&k=' + encodeURIComponent(KEY) + '&trip=' + encodeURIComponent(key) + '&leg=' + k + '&step=' + step + admQ(btn))
       .then(function (r) { return r.json(); })
@@ -314,7 +341,8 @@
         findTrip(key).forEach(function (t) { t.done = t.done || {}; t.done[k + '_' + step] = res.at; });
         store('atc_data', JSON.stringify(DATA)); render();
       })
-      .catch(function () { btn.classList.remove('busy'); btn.disabled = false; alert(L().sendFail); });
+      .catch(function () { btn.classList.remove('busy'); btn.disabled = false; ask(L().sendFail, null, true); });
+    });
   }
   function relayPush(res) {
     // If the server couldn't reach the notification service, send the alert from this phone instead.
@@ -327,7 +355,7 @@
   }
   function undoStep(btn) {
     var key = btn.getAttribute('data-trip'), k = btn.getAttribute('data-leg'), step = btn.getAttribute('data-step');
-    if (!confirm(L().confUndo.replace('{s}', btn.getAttribute('data-label')).replace('{n}', btn.getAttribute('data-name')))) return;
+    ask(L().confUndo.replace('{s}', btn.getAttribute('data-label')).replace('{n}', btn.getAttribute('data-name')), function () {
     btn.classList.add('busy'); btn.disabled = true;
     fetch(API + '?api=1&act=' + (btn.getAttribute('data-adm') ? 'aunmark' : 'unmark') + '&k=' + encodeURIComponent(KEY) + '&trip=' + encodeURIComponent(key) + '&leg=' + k + '&step=' + step + admQ(btn))
       .then(function (r) { return r.json(); })
@@ -337,7 +365,8 @@
         findTrip(key).forEach(function (t) { if (!t.done) return; delete t.done[k + '_' + step]; if (step === 'pickup') delete t.done[k + '_dropoff']; });
         store('atc_data', JSON.stringify(DATA)); render();
       })
-      .catch(function () { btn.classList.remove('busy'); btn.disabled = false; alert(L().sendFail); });
+      .catch(function () { btn.classList.remove('busy'); btn.disabled = false; ask(L().sendFail, null, true); });
+    });
   }
   function card(t) {
     var legs = t.ida && t.regreso ? L().both : t.ida ? L().goOnly : L().retOnly;
