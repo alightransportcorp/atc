@@ -171,19 +171,6 @@
   .pay .k { font-size:13px; opacity:.8; text-transform:uppercase; letter-spacing:.6px; }
   .pay .amt { font-size:52px; font-weight:900; margin:6px 0; color:var(--cream); }
   .cdone { flex:none; align-self:center; margin:0 -4px 0 0; padding:5px 10px; border-radius:999px; background:var(--accentbg); color:var(--bink); font-size:12px; font-weight:800; white-space:nowrap; }
-  .cdone.no { background:#fde2e2; color:#a12622; }
-  .cdone.ask { background:#ffd166; color:#5c3d00; }
-  :root[data-theme=dark] .cdone.no { background:#4a1f1d; color:#ffb4ad; }
-  :root[data-theme=dark] .cdone.ask { background:#5a4510; color:#ffd98a; }
-  .resp { margin:12px 14px 4px; padding-top:12px; border-top:1px dashed var(--line); }
-  .resp .rq { font-size:14px; font-weight:700; margin-bottom:8px; }
-  .resp .rbtns { display:flex; gap:8px; }
-  .resp button { flex:1; border:2px solid var(--line); border-radius:12px; padding:11px 6px; font:inherit; font-weight:800; font-size:14px; background:none; color:var(--ink); cursor:pointer; }
-  .resp button.acc.on { background:var(--brand); border-color:var(--brand); color:#fff; }
-  .resp button.dec.on { background:#c0392b; border-color:#c0392b; color:#fff; }
-  .resp button.busy { opacity:.6; }
-  .rtag { font-size:11px; font-weight:800; border-radius:999px; padding:2px 7px; margin-left:4px; white-space:nowrap; }
-  .rtag.ok { background:var(--accentbg); color:var(--bink); } .rtag.no { background:#fde2e2; color:#a12622; }
   .pill { display:inline-block; border-radius:999px; padding:5px 12px; font-weight:800; font-size:13px; }
   .pill.wait { background:#ffd166; color:#5c3d00; } .pill.done { background:#7ee2b8; color:#063d26; }
   .list { background:var(--card); border-radius:16px; box-shadow:0 2px 10px rgba(79,107,44,.07); overflow:hidden; }
@@ -240,7 +227,7 @@
           install:'⬇ Install app', todayTag:'TODAY', noKey:'Open your personal link once to activate the app. Ask Alec for it.',
           offline:'Couldn\'t load your trips. Check your connection and tap ↻.',
           pickedBtn:'Picked up', droppedBtn:'Dropped off', confPU:'Confirm you picked up {n}?', confDO:'Confirm you dropped off {n}?',
-          undo:'Undo', completed:'Completed', accept:'Accept', decline:'Decline', respQ:'Can you take this trip?', youAcc:'You accepted this trip. Tap Decline to change.', youDec:'You declined this trip. Tap Accept to change.', needResp:'Respond', accepted:'Accepted', declined:'Declined', confDec:'Decline the trip for {n}? Alec will be notified.', confUndo:'Undo "{s}" for {n}? Tap it again once it actually happens.',
+          undo:'Undo', completed:'Completed', confUndo:'Undo "{s}" for {n}? Tap it again once it actually happens.',
           sendFail:'Couldn\'t send. Check your connection and try again.',
           days:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] },
     es: { tabToday:'Hoy', tabWeek:'Esta semana', tabPay:'Próximo pago', hi:'¡Hola, {n}!', loading:'Cargando tus viajes…', trip:'viaje', trips:'viajes', miles:'millas',
@@ -250,7 +237,7 @@
           install:'⬇ Instalar app', todayTag:'HOY', noKey:'Abre tu enlace personal una vez para activar la app. Pídeselo a Alec.',
           offline:'No se pudieron cargar los viajes. Revisa tu conexión y toca ↻.',
           pickedBtn:'Ya lo recogí', droppedBtn:'Ya lo dejé', confPU:'¿Confirmas que recogiste a {n}?', confDO:'¿Confirmas que dejaste a {n}?',
-          undo:'Deshacer', completed:'Completado', accept:'Aceptar', decline:'Rechazar', respQ:'¿Puedes hacer este viaje?', youAcc:'Aceptaste este viaje. Toca Rechazar para cambiar.', youDec:'Rechazaste este viaje. Toca Aceptar para cambiar.', needResp:'Responder', accepted:'Aceptado', declined:'Rechazado', confDec:'¿Rechazar el viaje de {n}? Se le avisará a Alec.', confUndo:'¿Deshacer "{s}" para {n}? Vuelve a marcarlo cuando de verdad pase.',
+          undo:'Deshacer', completed:'Completado', confUndo:'¿Deshacer "{s}" para {n}? Vuelve a marcarlo cuando de verdad pase.',
           sendFail:'No se pudo enviar. Revisa tu conexión e inténtalo de nuevo.',
           days:['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'] }
   };
@@ -354,7 +341,7 @@
     if (b) h += '<div class="btns">' + b + '</div>';
     var note = (LANG || DATA.lang) === 'es' ? t.notas : (t.notes || t.notas);
     if (note) h += '<div class="note">⚠️ ' + esc(note) + '</div>';
-    return h + leg(t, 'ida') + leg(t, 'regreso') + respBlock(t) + '</div></div>';
+    return h + leg(t, 'ida') + leg(t, 'regreso') + '</div></div>';
   }
   function cid(t) { return [t.id || t.trip || '', t.date || '', t.time || '', t.name || ''].join('|'); }
   function stats(trips) {
@@ -394,44 +381,11 @@
     ['ida', 'regreso'].forEach(function (k) { if (t[k]) { n++; if (!d[k + '_dropoff']) n = -99; } });
     return n > 0;
   }
-  function canRespond(t) { return !!(DATA && DATA.askAccept && !RO && t.key && typeof t.resp !== 'object' && DATA.today && t.date >= DATA.today.date); }
-  function baseNm(n) { return String(n || '').trim().replace(/\s*\((u|uber)\)\s*$/i, '').trim().toLowerCase(); }
-  function anyDeclined(t) { var r = t.resp; if (!r || typeof r !== 'object') return false; return Object.keys(r).some(function (k) { return r[k] === 'declined'; }); }
-  function doneTag(t) {
-    if (isDone(t)) return '<span class="cdone">✓ ' + L().completed + '</span>';
-    if (t.resp === 'declined' || anyDeclined(t)) return '<span class="cdone no">✗ ' + L().declined + '</span>';
-    if (RO && t.resp === 'accepted') return '<span class="cdone">✓ ' + L().accepted + '</span>';
-    if (canRespond(t)) return t.resp === 'accepted' ? '<span class="cdone">✓ ' + L().accepted + '</span>' : '<span class="cdone ask">' + L().needResp + '</span>';
-    return '';
-  }
-  function respBlock(t) {
-    if (!canRespond(t)) return '';
-    var d = ' data-trip="' + esc(t.key) + '" data-name="' + esc(nice(t.name)) + '"';
-    return '<div class="resp"><div class="rq">' + (t.resp === 'accepted' ? L().youAcc : t.resp === 'declined' ? L().youDec : L().respQ) + '</div><div class="rbtns">' +
-      '<button type="button" class="acc' + (t.resp === 'accepted' ? ' on' : '') + '" data-r="accepted"' + d + '>✓ ' + L().accept + '</button>' +
-      '<button type="button" class="dec' + (t.resp === 'declined' ? ' on' : '') + '" data-r="declined"' + d + '>✗ ' + L().decline + '</button></div></div>';
-  }
-  function respond(btn) {
-    var key = btn.getAttribute('data-trip'), r = btn.getAttribute('data-r');
-    var cur = (findTrip(key)[0] || {}).resp;
-    if (cur === r) return;
-    if (r === 'declined' && !confirm(L().confDec.replace('{n}', btn.getAttribute('data-name')))) return;
-    btn.classList.add('busy'); btn.disabled = true;
-    fetch(API + '?api=1&act=respond&k=' + encodeURIComponent(KEY) + '&trip=' + encodeURIComponent(key) + '&r=' + r)
-      .then(function (x) { return x.json(); })
-      .then(function (res) {
-        if (!res || !res.ok) throw new Error(res && res.error);
-        relayPush(res);
-        findTrip(key).forEach(function (t) { t.resp = r; });
-        store('atc_data', JSON.stringify(DATA)); render();
-      })
-      .catch(function () { btn.classList.remove('busy'); btn.disabled = false; alert(L().sendFail); });
-  }
+  function doneTag(t) { return isDone(t) ? '<span class="cdone">✓ ' + L().completed + '</span>' : ''; }
   function legRow(t, k) {
     var l = t[k]; if (!l) return '';
     var cls = k === 'ida' ? 'ida' : 'ret', tag = k === 'ida' ? 'GOING' : 'RETURN';
-    var rs = l.driver && t.resp && typeof t.resp === 'object' ? t.resp[baseNm(l.driver)] : '';
-    var drv = l.driver ? esc(l.driver) + (rs === 'accepted' ? ' <span class="rtag ok">✓ Accepted</span>' : rs === 'declined' ? ' <span class="rtag no">✗ Declined</span>' : '') : '<span class="st na">Unassigned</span>';
+    var drv = l.driver ? esc(l.driver) : '<span class="st na">Unassigned</span>';
     return '<div class="lrow ' + cls + '"><span class="legtag">' + tag + '</span><span class="drv">' + drv + '<div class="rt">' + esc(l.from) + ' → ' + esc(l.to) + ' · ' + mi(l.miles) + '</div></span>' + stat(t, k) + '</div>';
   }
   function tripRow(t) {
@@ -632,8 +586,6 @@
   document.getElementById('main').addEventListener('click', function (e) {
     var chip = e.target.closest && e.target.closest('.chip');
     if (chip) { DRV = chip.getAttribute('data-drv'); store('atc_drv', DRV); render(); return; }
-    var rb = e.target.closest && e.target.closest('.resp button');
-    if (rb) { if (!rb.disabled) respond(rb); return; }
     var mk = e.target.closest && e.target.closest('.chk button');
     if (mk) { if (!mk.disabled) { if (mk.classList.contains('undo')) undoStep(mk); else markStep(mk); } return; }
     var hd = e.target.closest && e.target.closest('.chead'); if (!hd) return;
