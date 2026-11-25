@@ -14,6 +14,7 @@
   var l=document.querySelector('link[rel=manifest]'); if(l) l.parentNode.removeChild(l);
 }catch(e){}})();
 </script>
+<script>try{var _t=localStorage.getItem('atc_theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -24,7 +25,16 @@
     --bg:#f7f2e2; --card:#fffdf7; --ink:#2a2e1f; --muted:#7a7a62; --line:#ece4cc;
     --brand:#4f6b2c; --brand2:#6b8a3a; --accent:#5b8a43; --accentbg:#eaf2dc; --cream:#fff2cc;
     --ret:#e8590c; --retbg:#fff1e6; --warn:#b45309; --warnbg:#fff7e0; --link:#4f6b2c;
+    --bink:#4f6b2c; --navbg:rgba(255,253,247,.97); --navon:#fff2cc; --hl:#fff2cc; --pendbg:#f1ecdc; --pendfg:#7a6a3a; --pubg:#fff1c2; --pufg:#7a5200; --shadow:rgba(79,107,44,.08);
   }
+  :root[data-theme=dark] {
+    --bg:#12150c; --card:#1d2215; --ink:#eceedf; --muted:#a2a587; --line:#2d3420;
+    --brand:#3f5a22; --brand2:#56742f; --accent:#7fae5c; --accentbg:#2a3a1c;
+    --ret:#ff8a4c; --retbg:#3a2416; --warn:#f0b35a; --warnbg:#3a2e14; --link:#c3dc93;
+    --bink:#c3dc93; --navbg:rgba(24,28,17,.97); --navon:#2a3a1c; --hl:#2a3320; --pendbg:#2e2c20; --pendfg:#d8cca0; --pubg:#3d3314; --pufg:#ffd77a; --shadow:rgba(0,0,0,.35);
+  }
+  :root[data-theme=dark] .go { background:#2e3322; }
+  :root[data-theme=dark] .empty, :root[data-theme=dark] .card, :root[data-theme=dark] .stat, :root[data-theme=dark] .kpi { box-shadow:0 2px 10px var(--shadow); }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
   header { background:linear-gradient(160deg,var(--brand),var(--brand2)); color:#fff; padding:calc(18px + env(safe-area-inset-top)) 16px 54px; }
@@ -58,7 +68,7 @@
   .who { font-weight:800; font-size:17px; line-height:1.2; }
   .sub { color:var(--muted); font-size:13px; margin-top:2px; }
   .btns { display:flex; flex-wrap:wrap; gap:8px; padding:0 14px 12px; }
-  .btn { display:inline-flex; align-items:center; gap:6px; text-decoration:none; font-weight:700; font-size:14px; border-radius:999px; padding:9px 14px; background:var(--accentbg); color:var(--brand); }
+  .btn { display:inline-flex; align-items:center; gap:6px; text-decoration:none; font-weight:700; font-size:14px; border-radius:999px; padding:9px 14px; background:var(--accentbg); color:var(--bink); }
   .btn.call { background:var(--accent); color:#fff; }
   .leg { border-top:1px solid var(--line); padding:12px 14px; }
   .legtag { display:inline-block; font-size:12px; font-weight:800; letter-spacing:.5px; border-radius:999px; padding:3px 10px; margin-bottom:8px; }
@@ -73,27 +83,31 @@
   .csz { font-size:13px; color:var(--muted); }
   .go { text-decoration:none; background:var(--cream); color:var(--link); font-weight:800; font-size:13px; border-radius:10px; padding:8px 10px; align-self:center; white-space:nowrap; }
   nav button.adm { display:none; }
-  main > h2:first-child { color:rgba(255,248,225,.92); margin-top:4px; }
+  main:not(.flat) > h2:first-child { color:rgba(255,248,225,.92); margin-top:4px; }
+  main.flat { margin-top:16px; }
+  main.flat > h2:first-child { margin-top:4px; }
   .st { display:inline-block; font-size:12px; font-weight:800; border-radius:999px; padding:3px 9px; white-space:nowrap; }
-  .st.pend { background:#f1ecdc; color:#7a6a3a; } .st.pu { background:#fff1c2; color:#7a5200; } .st.dn { background:var(--accentbg); color:var(--brand); } .st.na { background:var(--warnbg); color:var(--warn); }
+  .st.pend { background:var(--pendbg); color:var(--pendfg); } .st.pu { background:var(--pubg); color:var(--pufg); } .st.dn { background:var(--accentbg); color:var(--bink); } .st.na { background:var(--warnbg); color:var(--warn); }
   .lrow { display:flex; align-items:center; gap:8px; padding:10px 14px; border-top:1px solid var(--line); font-size:14px; }
   .lrow .legtag { margin:0; } .lrow .drv { font-weight:800; flex:1; min-width:0; }
   .lrow .rt { font-size:12px; color:var(--muted); }
   .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
   .kpi { background:var(--card); border-radius:16px; padding:12px; box-shadow:0 2px 10px rgba(79,107,44,.07); }
   .kpi b { display:block; font-size:19px; } .kpi span { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; font-weight:700; }
-  .kpi.pos b { color:var(--brand); } .kpi.neg b { color:var(--ret); }
+  .kpi.pos b { color:var(--bink); } .kpi.neg b { color:var(--ret); }
   .list .r.h { font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:800; letter-spacing:.4px; padding:8px 14px; }
-  .list .r .c { min-width:70px; text-align:right; }
+  .list .r.g { display:grid; grid-template-columns:minmax(0,1fr) 72px 72px; gap:6px; align-items:center; font-size:14px; }
+  .list .r.g > span:first-child { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .list .r .c { text-align:right; font-variant-numeric:tabular-nums; }
   details.dv > summary { list-style:none; display:flex; justify-content:space-between; align-items:center; padding:13px 14px; border-top:1px solid var(--line); font-weight:800; cursor:pointer; }
   details.dv > summary::-webkit-details-marker { display:none; }
   details.dv .tr { display:flex; justify-content:space-between; gap:8px; padding:8px 14px 8px 24px; font-size:14px; color:var(--muted); border-top:1px dashed var(--line); }
   .chips { display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 6px; }
-  .chip { border:0; border-radius:999px; padding:9px 16px; font:inherit; font-weight:800; font-size:14px; background:var(--card); color:var(--brand); box-shadow:0 2px 8px rgba(79,107,44,.08); }
+  .chip { border:0; border-radius:999px; padding:9px 16px; font:inherit; font-weight:800; font-size:14px; background:var(--card); color:var(--bink); box-shadow:0 2px 8px rgba(79,107,44,.08); }
   .chip.on { background:var(--brand); color:#fff; }
   .chk { display:flex; gap:8px; margin-top:12px; }
   .chk button { flex:1; border:0; border-radius:12px; padding:12px 6px; font:inherit; font-weight:800; font-size:14px; background:var(--brand); color:#fff; cursor:pointer; }
-  .chk button.ok { background:var(--accentbg); color:var(--brand); }
+  .chk button.ok { background:var(--accentbg); color:var(--bink); }
   .chk button.wait { opacity:.4; }
   .chk button.busy { opacity:.6; }
   .note { margin:0 14px 14px; background:var(--warnbg); color:var(--warn); border-radius:12px; padding:10px 12px; font-weight:700; font-size:14px; }
@@ -115,10 +129,10 @@
   .list .d { background:var(--cream); color:var(--muted); font-size:12px; font-weight:800; letter-spacing:.4px; padding:8px 14px; text-transform:uppercase; }
   .list .r { display:flex; justify-content:space-between; gap:10px; padding:11px 14px; border-top:1px solid var(--line); font-size:15px; }
   .list .r span:last-child { color:var(--muted); white-space:nowrap; }
-  nav { position:fixed; left:0; right:0; bottom:0; background:rgba(255,253,247,.97); backdrop-filter:blur(8px); border-top:1px solid var(--line); display:flex; padding:6px 8px calc(8px + env(safe-area-inset-bottom)); z-index:9; }
+  nav { position:fixed; left:0; right:0; bottom:0; background:var(--navbg); backdrop-filter:blur(8px); border-top:1px solid var(--line); display:flex; padding:6px 8px calc(8px + env(safe-area-inset-bottom)); z-index:9; }
   nav button { flex:1; border:0; background:none; color:var(--muted); font-size:12px; font-weight:700; padding:6px 4px; border-radius:14px; }
   nav button .i { display:block; font-size:22px; line-height:1.1; filter:grayscale(1); opacity:.6; }
-  nav button.on { color:var(--brand); background:var(--cream); }
+  nav button.on { color:var(--bink); background:var(--navon); }
   nav button.on .i { filter:none; opacity:1; }
   .msg { text-align:center; color:var(--muted); padding:40px 16px; }
   .loader { width:30px; height:30px; border:3px solid #d1d5db; border-top-color:var(--brand); border-radius:50%; margin:0 auto 10px; animation:rot .8s linear infinite; }
@@ -134,6 +148,7 @@
     </div>
     <div class="tools">
       <div class="lang"><button type="button" data-l="en">EN</button><button type="button" data-l="es">ES</button></div>
+      <button class="refresh" id="theme" type="button" aria-label="Dark or light mode">🌙</button>
       <button class="refresh" id="refresh" type="button" aria-label="Refresh">↻</button>
     </div>
   </div>
@@ -145,7 +160,7 @@
   <button data-v="semana" type="button"><span class="i">📅</span><span data-t="tabWeek"></span></button>
   <button data-v="pago" type="button"><span class="i">💵</span><span data-t="tabPay"></span></button>
   <button data-v="trips" type="button" class="adm"><span class="i">📋</span><span>Trips</span></button>
-  <button data-v="money" type="button" class="adm"><span class="i">📈</span><span>Money</span></button>
+  <button data-v="money" type="button" class="adm"><span class="i">📈</span><span>Financials</span></button>
   <button data-v="payouts" type="button" class="adm"><span class="i">💵</span><span>Payouts</span></button>
   <button data-v="drivers" type="button" class="adm"><span class="i">👥</span><span>Drivers</span></button>
 </nav>
@@ -309,10 +324,12 @@
     var h = '<div class="pay" style="text-align:left"><div class="k">Pay period ' + esc(md(p.start)) + ' – ' + esc(md(p.end)) + ' (Wed–Tue)</div><div class="amt" style="font-size:40px">' + $$(t.revenue) + '</div>' +
       '<div class="k" style="opacity:.9">' + t.trips + ' trips' + (src ? ' · ' + src : '') + '</div></div>';
     h += '<div style="margin-top:10px">' + kpis(t) + '</div>';
-    h += '<div class="list" style="margin-top:10px"><div class="r h"><span>Day</span><span class="c">Revenue</span><span class="c">Profit</span></div>';
+    h += '<div class="list" style="margin-top:10px"><div class="r h g"><span>Day</span><span class="c">Revenue</span><span class="c">Profit</span></div>';
     p.days.forEach(function (d) {
+      var isSun = new Date(d.date + 'T12:00:00').getDay() === 0;
+      if (isSun && !d.trips) return;
       var isT = d.date === DATA.today.date;
-      h += '<div class="r"' + (isT ? ' style="background:var(--cream)"' : '') + '><span>' + esc(niceDay(d.date)) + ' <span style="color:var(--muted);font-size:12px">· ' + d.trips + '</span></span><span class="c">' + $0(d.revenue) + '</span><span class="c" style="color:var(--brand);font-weight:800">' + $0(d.profit) + '</span></div>';
+      h += '<div class="r g"' + (isT ? ' style="background:var(--hl)"' : '') + '><span>' + esc(niceDay(d.date)) + ' <span style="color:var(--muted);font-size:12px">· ' + d.trips + '</span></span><span class="c">' + $0(d.revenue) + '</span><span class="c" style="color:var(--bink);font-weight:800">' + $0(d.profit) + '</span></div>';
     });
     return h + '</div>';
   }
@@ -329,8 +346,11 @@
     if (!ps.length) return '<div class="empty">No upcoming payouts found.</div>';
     var h = '';
     ps.forEach(function (p, i) {
-      h += '<h2>' + (i === 0 ? 'Next payout' : 'Following payout') + ' · ' + esc(niceDay(p.sendOn)) + '</h2>';
-      h += '<div class="pay"><div class="k">Week of ' + esc(md(p.start)) + ' – ' + esc(md(p.end)) + '</div><div class="amt">' + $0(p.total) + '</div><div class="k">' + p.drivers.length + ' drivers</div></div>';
+      var paid = p.sendOn < DATA.today.date;
+      h += '<h2>' + (paid ? 'Paid' : 'Upcoming payout') + ' · ' + esc(niceDay(p.sendOn)) + '</h2>';
+      h += '<div class="pay"><div class="k">Trips ' + esc(md(p.start)) + ' – ' + esc(md(p.end)) + '</div><div class="amt">' + $0(p.total) + '</div>' +
+        '<span class="pill ' + (paid ? 'done' : 'wait') + '">' + (paid ? '✓ Paid ' : '🗓 Pay on ') + esc(dayName(p.sendOn)) + ' ' + esc(md(p.sendOn)) + '</span>' +
+        '<div class="k" style="margin-top:10px">' + p.drivers.length + ' drivers · switches to the new week on Sunday</div></div>';
       h += '<div class="list" style="margin-top:10px">';
       p.drivers.forEach(function (d) {
         var src = Object.keys(d.bySrc).length > 1 ? Object.keys(d.bySrc).map(function (s) { return esc(s) + ' ' + $0(d.bySrc[s]); }).join(' · ') : '';
@@ -418,6 +438,7 @@
     if (DATA.admin && (V === 'semana' || V === 'pago')) V = 'hoy';
     if (DATA.admin && DATA.adminError && VIEW !== 'hoy') { document.getElementById('main').innerHTML = '<div class="card msg">Couldn\'t load this tab: ' + esc(DATA.adminError) + '</div>'; return; }
     chrome();
+    document.getElementById('main').classList.toggle('flat', !!(DATA.admin && /^(money|payouts|drivers)$/.test(V)));
     var html = adminViews[V] && DATA.admin ? adminViews[V]() : V === 'semana' ? renderSemana() : V === 'pago' ? renderPago() : renderHoy();
     document.getElementById('main').innerHTML = html + '<div class="upd">' + L().updated + esc(DATA.now) + '</div>';
   }
@@ -440,6 +461,16 @@
     b.addEventListener('click', function () { LANG = b.dataset.l; store('atc_lang', LANG); render(); });
   });
   document.getElementById('refresh').addEventListener('click', load);
+  function applyTheme() {
+    var t = store('atc_theme') || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', t);
+    document.getElementById('theme').textContent = t === 'dark' ? '☀️' : '🌙';
+    var mc = document.querySelector('meta[name=theme-color]'); if (mc) mc.setAttribute('content', t === 'dark' ? '#3f5a22' : '#4f6b2c');
+  }
+  document.getElementById('theme').addEventListener('click', function () {
+    store('atc_theme', document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); applyTheme();
+  });
+  applyTheme();
   document.getElementById('main').addEventListener('click', function (e) {
     var chip = e.target.closest && e.target.closest('.chip');
     if (chip) { DRV = chip.getAttribute('data-drv'); store('atc_drv', DRV); render(); return; }
