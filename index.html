@@ -345,12 +345,16 @@
     });
   }
   function relayPush(res) {
-    // If the server couldn't reach the notification service, send the alert from this phone instead.
+    // Send Alec's alert straight from this phone (each phone has its own ntfy allowance).
     if (!res || !res.push) return;
-    var body = JSON.stringify(res.push), tries = 0;
+    var push = res.push, body = JSON.stringify(push), tries = 0;
     (function go() {
       fetch('https://ntfy.sh/', { method: 'POST', body: body }).then(function (r) { if (!r.ok) throw 0; })
-        .catch(function () { if (++tries < 3) setTimeout(go, 3000 * tries); });
+        .catch(function () {
+          if (++tries < 4) return setTimeout(go, 2000 * tries);
+          // Phone couldn't reach ntfy: hand it back to the server (it tries ntfy, then emails Alec).
+          fetch(API + '?api=1&act=pushfail&k=' + encodeURIComponent(KEY) + '&title=' + encodeURIComponent(push.title || '') + '&msg=' + encodeURIComponent(push.message || '')).catch(function () {});
+        });
     })();
   }
   function undoStep(btn) {
