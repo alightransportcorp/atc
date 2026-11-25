@@ -36,6 +36,10 @@
   :root[data-theme=dark] .go { background:#2e3322; }
   :root[data-theme=dark] .empty, :root[data-theme=dark] .card, :root[data-theme=dark] .stat, :root[data-theme=dark] .kpi { box-shadow:0 2px 10px var(--shadow); }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; overflow:hidden; overscroll-behavior:none; }
+  body { display:flex; flex-direction:column; height:100vh; height:100dvh; }
+  header { flex:none; }
+  #scroller { flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
   html,body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
   header { background:linear-gradient(160deg,var(--brand),var(--brand2)); color:#fff; padding:calc(10px + env(safe-area-inset-top)) 16px 12px; }
   .top { display:flex; justify-content:space-between; align-items:center; gap:12px; max-width:640px; margin:0 auto; }
@@ -51,7 +55,7 @@
   .refresh.spin { animation:rot .9s linear infinite; }
   @keyframes rot { to { transform:rotate(360deg); } }
   .install { display:none; margin:10px auto 0; background:var(--cream); color:var(--brand); border:0; border-radius:999px; padding:10px 16px; font-weight:800; font-size:14px; }
-  main { max-width:640px; margin:12px auto 0; padding:0 14px 110px; }
+  main { max-width:640px; margin:12px auto 0; padding:0 14px 24px; }
   .stats { display:flex; gap:10px; margin-bottom:16px; }
   .stat { flex:1; background:var(--card); border-radius:16px; padding:12px 14px; box-shadow:0 2px 10px rgba(79,107,44,.08); }
   .stat b { display:block; font-size:24px; }
@@ -127,7 +131,7 @@
   .list .d { background:var(--cream); color:var(--muted); font-size:12px; font-weight:800; letter-spacing:.4px; padding:8px 14px; text-transform:uppercase; }
   .list .r { display:flex; justify-content:space-between; gap:10px; padding:11px 14px; border-top:1px solid var(--line); font-size:15px; }
   .list .r span:last-child { color:var(--muted); white-space:nowrap; }
-  nav { position:fixed; left:0; right:0; bottom:0; background:var(--navbg); backdrop-filter:blur(8px); border-top:1px solid var(--line); display:flex; padding:6px 8px calc(8px + env(safe-area-inset-bottom)); z-index:9; }
+  nav { flex:none; position:relative; background:var(--navbg); backdrop-filter:blur(8px); border-top:1px solid var(--line); display:flex; padding:6px 8px calc(8px + env(safe-area-inset-bottom)); z-index:9; }
   nav button { flex:1; border:0; background:none; color:var(--muted); font-size:12px; font-weight:700; padding:6px 4px; border-radius:14px; }
   nav button .i { display:block; font-size:22px; line-height:1.1; filter:grayscale(1); opacity:.6; }
   nav button.on { color:var(--bink); background:var(--navon); }
@@ -152,7 +156,7 @@
   </div>
   <div style="text-align:center"><button class="install" id="install" type="button"></button></div>
 </header>
-<main id="main"><div class="card msg"><div class="loader"></div><span id="loadmsg"></span></div></main>
+<div id="scroller"><main id="main"><div class="card msg"><div class="loader"></div><span id="loadmsg"></span></div></main></div>
 <nav>
   <button data-v="hoy" type="button"><span class="i">🚗</span><span data-t="tabToday"></span></button>
   <button data-v="semana" type="button"><span class="i">📅</span><span data-t="tabWeek"></span></button>
@@ -348,7 +352,7 @@
       h += '<h2>' + (paid ? 'Paid' : 'Upcoming payout') + ' · ' + esc(niceDay(p.sendOn)) + '</h2>';
       h += '<div class="pay"><div class="k">Trips ' + esc(md(p.start)) + ' – ' + esc(md(p.end)) + '</div><div class="amt">' + $0(p.total) + '</div>' +
         '<span class="pill ' + (paid ? 'done' : 'wait') + '">' + (paid ? '✓ Paid ' : '🗓 Pay on ') + esc(dayName(p.sendOn)) + ' ' + esc(md(p.sendOn)) + '</span>' +
-        '<div class="k" style="margin-top:10px">' + p.drivers.length + ' drivers · switches to the new week on Sunday</div></div>';
+        '<div class="k" style="margin-top:10px">' + p.drivers.length + ' drivers</div></div>';
       h += '<div class="list" style="margin-top:10px">';
       p.drivers.forEach(function (d) {
         var src = Object.keys(d.bySrc).length > 1 ? Object.keys(d.bySrc).map(function (s) { return esc(s) + ' ' + $0(d.bySrc[s]); }).join(' · ') : '';
@@ -368,17 +372,20 @@
     if (!ss.length) return '<div class="empty">No drivers found.</div>';
     var cur = ss.filter(function (s) { return s.name === DRV; })[0] || ss[0];
     var h = '<div class="chips">' + ss.map(function (s) { return '<button type="button" class="chip' + (s === cur ? ' on' : '') + '" data-drv="' + esc(s.name) + '">' + esc(s.name) + '</button>'; }).join('') + '</div>';
-    var today = cur.trips.filter(function (t) { return t.date === DATA.today.date; });
-    var later = cur.trips.filter(function (t) { return t.date > DATA.today.date; });
+    var td = DATA.today.date;
+    var today = cur.trips.filter(function (t) { return t.date === td; });
     RO = true;
-    h += stats(today) + '<h2>Today · ' + esc(niceDay(DATA.today.date)) + '</h2>';
-    h += today.length ? today.map(card).join('') : '<div class="empty">' + esc(cur.name) + ' has no trips today.</div>';
-    h += '<h2>Rest of the week</h2>';
+    h += stats(today) + '<h2>This week</h2>';
     var days = {}, order = [];
-    later.forEach(function (t) { if (!days[t.date]) { days[t.date] = []; order.push(t.date); } days[t.date].push(t); });
-    h += order.length ? order.map(function (d) {
-      return '<details class="day"><summary><span>' + esc(niceDay(d)) + '</span><span class="count">' + days[d].length + ' trips</span></summary><div class="inner">' + days[d].map(card).join('') + '</div></details>';
-    }).join('') : '<div class="empty">Nothing else this week.</div>';
+    cur.trips.slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; })
+      .forEach(function (t) { if (!days[t.date]) { days[t.date] = []; order.push(t.date); } days[t.date].push(t); });
+    if (order.indexOf(td) < 0) { order.push(td); order.sort(); days[td] = []; }
+    h += order.map(function (d) {
+      var n = days[d].length, lbl = (d === td ? 'Today · ' : '') + niceDay(d);
+      return '<details class="day"' + (d === td ? ' open' : '') + '><summary><span>' + esc(lbl) + '</span><span class="count">' +
+        (d < td ? 'done · ' : '') + n + (n === 1 ? ' trip' : ' trips') + '</span></summary><div class="inner">' +
+        (n ? days[d].map(card).join('') : '<div class="empty">' + esc(cur.name) + ' has no trips today.</div>') + '</div></details>';
+    }).join('');
     RO = false;
     return h;
   }
@@ -452,7 +459,7 @@
     });
   }
   document.querySelectorAll('nav button').forEach(function (b) {
-    b.addEventListener('click', function () { VIEW = b.dataset.v; store('atc_view', VIEW); render(); window.scrollTo(0, 0); });
+    b.addEventListener('click', function () { VIEW = b.dataset.v; store('atc_view', VIEW); render(); document.getElementById('scroller').scrollTop = 0; });
   });
   document.querySelectorAll('.lang button').forEach(function (b) {
     b.addEventListener('click', function () { LANG = b.dataset.l; store('atc_lang', LANG); render(); });
