@@ -134,6 +134,15 @@
   .list .r .c { text-align:right; font-variant-numeric:tabular-nums; }
   details.dv > summary { list-style:none; display:flex; justify-content:space-between; align-items:center; padding:13px 14px; border-top:1px solid var(--line); font-weight:800; cursor:pointer; }
   details.dv > summary::-webkit-details-marker { display:none; }
+  details.dm > summary.g { display:grid; grid-template-columns:minmax(0,1fr) 72px 72px; gap:6px; font-weight:400; font-size:14px; padding:11px 14px; }
+  details.dm > summary.g > span:first-child { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:700; }
+  details.dm > summary.g > span:first-child::before { content:'▸'; display:inline-block; width:14px; color:var(--muted); transition:transform .2s; }
+  details.dm[open] > summary.g > span:first-child::before { transform:rotate(90deg); }
+  details.dm .tr.g { display:grid; grid-template-columns:minmax(0,1fr) 72px 72px; gap:6px; padding:8px 14px 8px 28px; }
+  details.dm .tr.g > span:first-child { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:13px; }
+  details.dm .tr.g .c:last-child { color:var(--bink); font-weight:700; }
+  .list .r.g.nodet > span:first-child { padding-left:14px; }
+  .srctag { font-size:10px; font-weight:800; text-transform:uppercase; color:var(--muted); border:1px solid var(--line); border-radius:6px; padding:1px 4px; margin-left:4px; }
   details.dv .tr { display:flex; justify-content:space-between; gap:8px; padding:8px 14px 8px 24px; font-size:14px; color:var(--muted); border-top:1px dashed var(--line); }
   .chips { display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 6px; }
   .chip { border:0; border-radius:999px; padding:9px 16px; font:inherit; font-weight:800; font-size:14px; background:var(--card); color:var(--bink); box-shadow:0 2px 8px rgba(79,107,44,.08); }
@@ -357,7 +366,7 @@
     return '<div class="kpis"><div class="kpi"><b>' + $0(o.revenue) + '</b><span>Revenue</span></div><div class="kpi neg"><b>' + $0(o.pay) + '</b><span>Driver pay</span></div><div class="kpi pos"><b>' + $0(o.profit) + '</b><span>Profit</span></div></div>';
   }
   function periodHtml(p, open) {
-    var t = p.total, src = Object.keys(t.bySrc).map(function (s) { return esc(s) + ' ' + $$(t.bySrc[s]); }).join(' · ');
+    var t = p.total, multi = Object.keys(t.bySrc).length > 1, src = Object.keys(t.bySrc).map(function (s) { return esc(s) + ' ' + $$(t.bySrc[s]); }).join(' · ');
     var h = '<div class="pay" style="text-align:left"><div class="k">Pay period ' + esc(md(p.start)) + ' – ' + esc(md(p.end)) + ' (Wed–Tue)</div><div class="amt" style="font-size:40px">' + $$(t.revenue) + '</div>' +
       '<div class="k" style="opacity:.9">' + t.trips + ' trips' + (src ? ' · ' + src : '') + '</div></div>';
     h += '<div style="margin-top:10px">' + kpis(t) + '</div>';
@@ -366,7 +375,13 @@
       var isSun = new Date(d.date + 'T12:00:00').getDay() === 0;
       if (isSun && !d.trips) return;
       var isT = d.date === DATA.today.date;
-      h += '<div class="r g"' + (isT ? ' style="background:var(--hl)"' : '') + '><span>' + esc(niceDay(d.date)) + ' <span style="color:var(--muted);font-size:12px">· ' + d.trips + '</span></span><span class="c">' + $0(d.revenue) + '</span><span class="c" style="color:var(--bink);font-weight:800">' + $0(d.profit) + '</span></div>';
+      var row = '<span>' + esc(niceDay(d.date)) + ' <span style="color:var(--muted);font-size:12px">· ' + d.trips + '</span></span><span class="c">' + $0(d.revenue) + '</span><span class="c" style="color:var(--bink);font-weight:800">' + $0(d.profit) + '</span>';
+      var hl = isT ? ' style="background:var(--hl)"' : '';
+      if (!d.list || !d.list.length) { h += '<div class="r g nodet"' + hl + '>' + row + '</div>'; return; }
+      h += '<details class="dv dm"><summary class="g"' + hl + '>' + row + '</summary>' +
+        d.list.map(function (t) {
+          return '<div class="tr g"><span>' + esc(t.time) + ' · ' + esc(nice(t.name)) + '</span><span class="c">' + $0(t.revenue) + '</span><span class="c">' + $0(t.profit) + '</span></div>';
+        }).join('') + '</details>';
     });
     return h + '</div>';
   }
