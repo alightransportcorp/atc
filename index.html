@@ -154,6 +154,11 @@
   .chk button.ok { background:var(--accentbg); color:var(--bink); }
   .chk button.wait { opacity:.4; }
   .chk button.busy { opacity:.6; }
+  .chk .pend { font-size:12px; font-weight:700; color:#9a6a00; text-align:center; padding:4px 2px 0; }
+  .qbar { background:#fff3cd; color:#5c3d00; border-radius:12px; padding:10px 14px; font-size:14px; font-weight:700; margin:0 0 12px; }
+  #ptr { height:0; overflow:hidden; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:22px; }
+  #ptr span { display:inline-block; transition:transform .1s; }
+  #ptr.go span { animation:rot .9s linear infinite; }
   #askbg { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:24px; z-index:99; }
   #askbg[hidden] { display:none; }
   #askbox { background:var(--card,#fff); color:var(--ink,#222); border-radius:16px; padding:20px; max-width:340px; width:100%; box-shadow:0 10px 40px rgba(0,0,0,.3); }
@@ -218,7 +223,7 @@
   </div>
   <div style="text-align:center"><button class="install" id="install" type="button"></button></div>
 </header>
-<div id="scroller"><main id="main"><div class="card msg"><div class="loader"></div><span id="loadmsg"></span></div></main></div>
+<div id="scroller"><div id="ptr"><span>↻</span></div><main id="main"><div class="card msg"><div class="loader"></div><span id="loadmsg"></span></div></main></div>
 <nav>
   <button data-v="hoy" type="button"><span class="i">🚗</span><span data-t="tabToday"></span></button>
   <button data-v="semana" type="button"><span class="i">📅</span><span data-t="tabWeek"></span></button>
@@ -239,7 +244,7 @@
           offline:'Couldn\'t load your trips. Check your connection and tap ↻.',
           pickedBtn:'Picked up', droppedBtn:'Dropped off', confPU:'Confirm you picked up {n}?', confDO:'Confirm you dropped off {n}?', yes:'Yes', cancel:'Cancel', okBtn:'OK', puFirst:'Tap "Picked up" first, then "Dropped off".',
           undo:'Undo', completed:'Completed', confUndo:'Undo "{s}" for {n}? Tap it again once it actually happens.',
-          sendFail:'Couldn\'t send. Check your connection and try again.',
+          sendFail:'Couldn\'t send. Check your connection and try again.', waitSig:'Waiting for signal — it will send on its own', qbar:'⏳ {n} check-in(s) saved on this phone. They will send on their own when there is signal.', saveFail:'That check-in couldn\'t be saved. Please try it again.',
           days:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] },
     es: { tabToday:'Hoy', tabWeek:'Esta semana', tabPay:'Próximo pago', hi:'¡Hola, {n}!', loading:'Cargando tus viajes…', trip:'viaje', trips:'viajes', miles:'millas',
           today:'Hoy', tomorrow:'Mañana', noToday:'No tienes viajes hoy.', noTomorrow:'Todavía no hay viajes para mañana.', weekOf:'Semana del ', noWeek:'Todavía no tienes viajes esta semana.',
@@ -249,7 +254,7 @@
           offline:'No se pudieron cargar los viajes. Revisa tu conexión y toca ↻.',
           pickedBtn:'Ya lo recogí', droppedBtn:'Ya lo dejé', confPU:'¿Confirmas que recogiste a {n}?', confDO:'¿Confirmas que dejaste a {n}?', yes:'Sí', cancel:'Cancelar', okBtn:'OK', puFirst:'Primero toca "Ya lo recogí" y después "Ya lo dejé".',
           undo:'Deshacer', completed:'Completado', confUndo:'¿Deshacer "{s}" para {n}? Vuelve a marcarlo cuando de verdad pase.',
-          sendFail:'No se pudo enviar. Revisa tu conexión e inténtalo de nuevo.',
+          sendFail:'No se pudo enviar. Revisa tu conexión e inténtalo de nuevo.', waitSig:'Esperando señal — se enviará solo', qbar:'⏳ {n} marcación(es) guardada(s) en este teléfono. Se enviarán solas cuando haya señal.', saveFail:'No se pudo guardar esa marcación. Inténtalo de nuevo.',
           days:['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'] }
   };
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
@@ -295,6 +300,7 @@
         (admDrv ? ' data-adm="' + esc(admDrv) + '" data-date="' + esc(t.date) + '" data-pname="' + esc(t.name) + '"' : '');
       return '<div class="stp"><button type="button" class="mk ' + (at ? 'ok' : wait ? 'wait' : '') + '"' + data +
         (at ? ' disabled' : '') + '>' + (at ? '✓ ' + label + ' · ' + esc(at) : label) + '</button>' +
+        (at && isPend(t.key, k, step) ? '<div class="pend">⏳ ' + L().waitSig + '</div>' : '') +
         (at && canUndo ? '<button type="button" class="undo"' + data + '>↩ ' + L().undo + '</button>' : '') + '</div>';
     };
     return '<div class="chk">' + b('pickup', L().pickedBtn, pu, false, !dr) + b('dropoff', L().droppedBtn, dr, !pu, true) + '</div>';
@@ -328,21 +334,64 @@
     bg.onclick = function (e) { if (e.target === bg) done(false); };
     bg.hidden = false;
   }
-  function markStep(btn) {
-    var key = btn.getAttribute('data-trip'), k = btn.getAttribute('data-leg'), step = btn.getAttribute('data-step');
-    if (btn.classList.contains('wait')) { ask(L().puFirst, null, true); return; }
-    ask((step === 'pickup' ? L().confPU : L().confDO).replace('{n}', btn.getAttribute('data-name')), function () {
-    btn.classList.add('busy'); btn.disabled = true;
-    fetch(API + '?api=1&act=' + (btn.getAttribute('data-adm') ? 'amark' : 'mark') + '&k=' + encodeURIComponent(KEY) + '&trip=' + encodeURIComponent(key) + '&leg=' + k + '&step=' + step + admQ(btn))
+  // ---- Check-ins work without signal: every tap is saved on the phone first, then sent. ----
+  var QUEUE = []; try { QUEUE = JSON.parse(store('atc_queue') || '[]') || []; } catch (e) { QUEUE = []; }
+  var FLUSHING = false;
+  function saveQ() { store('atc_queue', JSON.stringify(QUEUE)); }
+  function clock(ms) { var d = new Date(ms), h = d.getHours(), m = d.getMinutes(); return ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + ' ' + (h < 12 ? 'AM' : 'PM'); }
+  function isPend(key, k, step) { return QUEUE.some(function (q) { return q.trip === key && q.leg === k && q.step === step && !q.undo; }); }
+  function applyQ(q) {
+    findTrip(q.trip).forEach(function (t) {
+      t.done = t.done || {};
+      if (q.undo) { delete t.done[q.leg + '_' + q.step]; if (q.step === 'pickup') delete t.done[q.leg + '_dropoff']; }
+      else t.done[q.leg + '_' + q.step] = q.at;
+    });
+  }
+  function applyAllQ() { if (DATA && !DATA.error) QUEUE.forEach(applyQ); }
+  function queueStep(btn, undo) {
+    var q = { trip: btn.getAttribute('data-trip'), leg: btn.getAttribute('data-leg'), step: btn.getAttribute('data-step'),
+      adm: btn.getAttribute('data-adm') ? 1 : 0, extra: admQ(btn), undo: undo ? 1 : 0, ts: Date.now() };
+    q.at = clock(q.ts);
+    if (undo) {
+      // Undoing a tap that hasn't been sent yet: just drop it from the phone.
+      var steps = q.step === 'pickup' ? ['pickup', 'dropoff'] : ['dropoff'];
+      var pend = QUEUE.filter(function (x) { return x.trip === q.trip && x.leg === q.leg && !x.undo && steps.indexOf(x.step) >= 0; });
+      if (pend.length && pend.some(function (x) { return x.step === q.step; })) {
+        QUEUE = QUEUE.filter(function (x) { return pend.indexOf(x) < 0; });
+        saveQ(); applyQ(q); store('atc_data', JSON.stringify(DATA)); render(); return;
+      }
+    }
+    QUEUE.push(q); saveQ(); applyQ(q); store('atc_data', JSON.stringify(DATA)); render(); flushQ();
+  }
+  function flushQ() {
+    if (FLUSHING || !QUEUE.length || !KEY) return;
+    FLUSHING = true;
+    var q = QUEUE[0];
+    var act = q.undo ? (q.adm ? 'aunmark' : 'unmark') : (q.adm ? 'amark' : 'mark');
+    var ctl = window.AbortController ? new AbortController() : null, tmo = setTimeout(function () { if (ctl) ctl.abort(); }, 20000);
+    fetch(API + '?api=1&act=' + act + '&k=' + encodeURIComponent(KEY) + '&trip=' + encodeURIComponent(q.trip) + '&leg=' + q.leg + '&step=' + q.step + (q.extra || '') + '&ts=' + q.ts, ctl ? { signal: ctl.signal } : undefined)
       .then(function (r) { return r.json(); })
       .then(function (res) {
-        if (!res || !res.ok) throw new Error(res && res.error);
-        relayPush(res);
-        findTrip(key).forEach(function (t) { t.done = t.done || {}; t.done[k + '_' + step] = res.at; });
-        store('atc_data', JSON.stringify(DATA)); render();
+        clearTimeout(tmo); FLUSHING = false;
+        if (res && res.error === 'busy') return;   // server briefly busy: try again on the next round
+        QUEUE = QUEUE.filter(function (x) { return x !== q && !(x.ts === q.ts && x.trip === q.trip && x.step === q.step); }); saveQ();
+        if (res && res.ok) {
+          relayPush(res);
+          if (!q.undo && res.at) findTrip(q.trip).forEach(function (t) { t.done = t.done || {}; t.done[q.leg + '_' + q.step] = res.at; });
+          store('atc_data', JSON.stringify(DATA)); render(); flushQ();
+        } else {
+          // The server said no (not a signal problem): undo it on screen and tell the driver.
+          load(); ask(L().saveFail, null, true); flushQ();
+        }
       })
-      .catch(function () { btn.classList.remove('busy'); btn.disabled = false; ask(L().sendFail, null, true); });
-    });
+      .catch(function () { clearTimeout(tmo); FLUSHING = false; render(); });   // no signal: keep it and try again later
+  }
+  window.addEventListener('online', flushQ);
+  setInterval(flushQ, 20000);
+  function markStep(btn) {
+    var step = btn.getAttribute('data-step');
+    if (btn.classList.contains('wait')) { ask(L().puFirst, null, true); return; }
+    ask((step === 'pickup' ? L().confPU : L().confDO).replace('{n}', btn.getAttribute('data-name')), function () { queueStep(btn, false); });
   }
   function relayPush(res) {
     // Send Alec's alert straight from this phone (each phone has its own ntfy allowance).
@@ -358,19 +407,7 @@
     })();
   }
   function undoStep(btn) {
-    var key = btn.getAttribute('data-trip'), k = btn.getAttribute('data-leg'), step = btn.getAttribute('data-step');
-    ask(L().confUndo.replace('{s}', btn.getAttribute('data-label')).replace('{n}', btn.getAttribute('data-name')), function () {
-    btn.classList.add('busy'); btn.disabled = true;
-    fetch(API + '?api=1&act=' + (btn.getAttribute('data-adm') ? 'aunmark' : 'unmark') + '&k=' + encodeURIComponent(KEY) + '&trip=' + encodeURIComponent(key) + '&leg=' + k + '&step=' + step + admQ(btn))
-      .then(function (r) { return r.json(); })
-      .then(function (res) {
-        if (!res || !res.ok) throw new Error(res && res.error);
-        relayPush(res);
-        findTrip(key).forEach(function (t) { if (!t.done) return; delete t.done[k + '_' + step]; if (step === 'pickup') delete t.done[k + '_dropoff']; });
-        store('atc_data', JSON.stringify(DATA)); render();
-      })
-      .catch(function () { btn.classList.remove('busy'); btn.disabled = false; ask(L().sendFail, null, true); });
-    });
+    ask(L().confUndo.replace('{s}', btn.getAttribute('data-label')).replace('{n}', btn.getAttribute('data-name')), function () { queueStep(btn, true); });
   }
   function card(t) {
     var legs = t.ida && t.regreso ? L().both : t.ida ? L().goOnly : L().retOnly;
@@ -583,15 +620,16 @@
     if (isAdm() && DATA.adminError && VIEW !== 'hoy') { document.getElementById('main').innerHTML = '<div class="card msg">Couldn\'t load this tab: ' + esc(DATA.adminError) + '</div>'; return; }
     chrome();
     var html = adminViews[V] && isAdm() ? adminViews[V]() : V === 'semana' ? renderSemana() : V === 'pago' ? renderPago() : renderHoy();
+    if (QUEUE.length) html = '<div class="qbar">' + L().qbar.replace('{n}', QUEUE.length) + '</div>' + html;
     document.getElementById('main').innerHTML = html + '<div class="upd">' + L().updated + esc(DATA.now) + '</div>';
   }
   function load() {
     var r = document.getElementById('refresh'); r.classList.add('spin');
-    if (!KEY) { r.classList.remove('spin'); DATA = { error: 'nokey', nokey: true }; render(); return; }
-    fetch(API + '?api=1&k=' + encodeURIComponent(KEY)).then(function (res) { return res.json(); }).then(function (d) {
+    if (!KEY) { r.classList.remove('spin'); DATA = { error: 'nokey', nokey: true }; render(); return Promise.resolve(); }
+    return fetch(API + '?api=1&k=' + encodeURIComponent(KEY)).then(function (res) { return res.json(); }).then(function (d) {
       r.classList.remove('spin');
       if (!d.error) store('atc_data', JSON.stringify(d));
-      DATA = d; render();
+      DATA = d; applyAllQ(); render(); flushQ();
     }).catch(function () {
       r.classList.remove('spin');
       if (!DATA) document.getElementById('main').innerHTML = '<div class="card msg">' + L().offline + '</div>';
@@ -640,6 +678,29 @@
   document.addEventListener('visibilitychange', function () { if (!document.hidden) load(); });
   setInterval(load, 5 * 60 * 1000);
   try { var cached = store('atc_data'); if (cached && KEY) DATA = JSON.parse(cached); } catch (e) {}
+  applyAllQ();
+  // Pull down to refresh
+  (function () {
+    var sc = document.getElementById('scroller'), ptr = document.getElementById('ptr'), y0 = null, h = 0, busy = false;
+    sc.addEventListener('touchstart', function (e) { y0 = (!busy && sc.scrollTop <= 0) ? e.touches[0].clientY : null; h = 0; }, { passive: true });
+    sc.addEventListener('touchmove', function (e) {
+      if (y0 === null) return;
+      var dy = e.touches[0].clientY - y0;
+      if (dy <= 0 || sc.scrollTop > 0) { h = 0; ptr.style.height = '0'; return; }
+      h = Math.min(dy * 0.5, 80); ptr.style.transition = 'none'; ptr.style.height = h + 'px';
+      ptr.firstChild.style.transform = 'rotate(' + (h * 4) + 'deg)'; ptr.style.opacity = Math.min(1, h / 60);
+    }, { passive: true });
+    sc.addEventListener('touchend', function () {
+      if (y0 === null) return; y0 = null;
+      ptr.style.transition = 'height .2s';
+      if (h >= 60) {
+        busy = true; ptr.style.height = '48px'; ptr.classList.add('go');
+        var finish = function () { busy = false; ptr.classList.remove('go'); ptr.style.height = '0'; };
+        Promise.resolve(load()).then(finish, finish);
+      } else ptr.style.height = '0';
+      h = 0;
+    });
+  })();
   render(); load();
 </script>
 </body>
