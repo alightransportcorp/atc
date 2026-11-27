@@ -475,7 +475,7 @@
   function doneTag(t) { return isDone(t) ? '<span class="cdone">✓ ' + L().completed + '</span>' : ''; }
   function legRow(t, k) {
     var l = t[k]; if (!l) return '';
-    var cls = /^ida/.test(k) ? 'ida' : 'ret', tag = segTag(t, k, true);
+    var cls = /^ida/.test(k) ? 'ida' : 'ret', tag = segTag(t, k, true).replace(' · RETURN', '');   // orange tag already marks the return
     var drv = l.driver ? esc(l.driver) : '<span class="st na">Unassigned</span>';
     return '<div class="lrow ' + cls + '"><span class="legtag">' + tag + '</span><span class="drv">' + drv + '<div class="rt">' + esc(l.from) + ' → ' + esc(l.to) + legMi(l) + '</div></span>' + stat(t, k) + '</div>' +
       (l.driver ? '<div class="achk">' + checks(t, k, l.driver) + '</div>' : '');
