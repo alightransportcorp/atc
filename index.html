@@ -238,7 +238,7 @@
   var T = {
     en: { tabToday:'Today', tabWeek:'This week', tabPay:'Next payment', hi:'Hi, {n}!', loading:'Loading your trips…', trip:'trip', trips:'trips', miles:'miles',
           today:'Today', tomorrow:'Tomorrow', noToday:'No trips today.', noTomorrow:'No trips for tomorrow yet.', weekOf:'Week of ', noWeek:'No trips this week yet.',
-          call:'📞 Call', pickup:'Pick up', dropoff:'Drop off', go:'Go ➜', going:'GOING', ret:'RETURN', both:'Round trip', goOnly:'One way', retOnly:'Return only',
+          call:'📞 Call', pickup:'Pick up', dropoff:'Drop off', go:'Go ➜', going:'GOING', ret:'RETURN', seg:'SEGMENT', segs:'segments', both:'Round trip', goOnly:'One way', retOnly:'Return only',
           nextPay:'Next payment', paysOn:'🗓 Pays on ', paidOn:'✓ Paid on ', included:'Trips included', noPayWeek:'No trips that week.', updated:'Updated ',
           install:'⬇ Install app', todayTag:'TODAY', noKey:'Open your personal link once to activate the app. Ask Alec for it.',
           offline:'Couldn\'t load your trips. Check your connection and tap ↻.',
@@ -248,7 +248,7 @@
           days:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] },
     es: { tabToday:'Hoy', tabWeek:'Esta semana', tabPay:'Próximo pago', hi:'¡Hola, {n}!', loading:'Cargando tus viajes…', trip:'viaje', trips:'viajes', miles:'millas',
           today:'Hoy', tomorrow:'Mañana', noToday:'No tienes viajes hoy.', noTomorrow:'Todavía no hay viajes para mañana.', weekOf:'Semana del ', noWeek:'Todavía no tienes viajes esta semana.',
-          call:'📞 Llamar', pickup:'Recoger', dropoff:'Dejar', go:'Ir ➜', going:'IDA', ret:'REGRESO', both:'Ida y regreso', goOnly:'Ida solamente', retOnly:'Solo regreso',
+          call:'📞 Llamar', pickup:'Recoger', dropoff:'Dejar', go:'Ir ➜', going:'IDA', ret:'REGRESO', seg:'TRAMO', segs:'tramos', both:'Ida y regreso', goOnly:'Ida solamente', retOnly:'Solo regreso',
           nextPay:'Próximo pago', paysOn:'🗓 Se paga el ', paidOn:'✓ Pagado el ', included:'Viajes incluidos', noPayWeek:'No tuviste viajes esa semana.', updated:'Actualizado ',
           install:'⬇ Instalar app', todayTag:'HOY', noKey:'Abre tu enlace personal una vez para activar la app. Pídeselo a Alec.',
           offline:'No se pudieron cargar los viajes. Revisa tu conexión y toca ↻.',
@@ -276,6 +276,18 @@
   function safeUrl(u) { return /^https:\/\//.test(u) ? esc(u) : '#'; }
   function tel(p) { var d = String(p).replace(/\D/g, '').slice(-10); return d.length === 10 ? 'tel:+1' + d : '#'; }
   function mi(n) { return (Math.round(n * 10) / 10).toFixed(1) + ' mi'; }
+  // Trip segments: normally ida (going) + regreso (return). A 3-segment trip adds ida2 (and maybe ida3 / regreso2).
+  var LEGS = ['ida', 'ida2', 'ida3', 'regreso', 'regreso2', 'regreso3'];
+  function legKeys(t) { return LEGS.filter(function (k) { return t[k]; }); }
+  function multi(t) { return !!(t.ida2 || t.regreso2); }
+  function segTag(t, k, en) {
+    var G = en ? 'GOING' : L().going, R = en ? 'RETURN' : L().ret, S = en ? 'SEGMENT' : L().seg;
+    if (!multi(t)) return k === 'ida' ? G : R;
+    if (/^ida/.test(k)) return S + ' ' + (k === 'ida' ? 1 : Number(k.slice(3)));
+    var goN = ['ida', 'ida2', 'ida3'].filter(function (x) { return t[x]; }).length, r = k === 'regreso' ? 1 : Number(k.slice(7));
+    return goN ? S + ' ' + (goN + r) + ' · ' + R : R + (r > 1 ? ' ' + r : '');
+  }
+  function legMi(l) { return l.miles == null ? '' : ' · ' + mi(l.miles); }
   function nice(name) { var p = String(name).split(','); return p.length > 1 ? p[1].trim() + ' ' + p[0].trim() : name; }
   function dayName(ymd) { var p = ymd.split('-'); return L().days[new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).getUTCDay()]; }
   function md(ymd) { var p = ymd.split('-'); return (+p[1]) + '/' + (+p[2]); }
@@ -287,8 +299,8 @@
   }
   function leg(t, k) {
     var l = t[k]; if (!l) return '';
-    var cls = k === 'ida' ? 'ida' : 'ret', tag = k === 'ida' ? L().going : L().ret;
-    return '<div class="leg ' + cls + '"><span class="legtag">' + tag + ' · ' + mi(l.miles) + (l.uber ? ' · 🚕 UBER' : '') + '</span>' +
+    var cls = /^ida/.test(k) ? 'ida' : 'ret', tag = segTag(t, k);
+    return '<div class="leg ' + cls + '"><span class="legtag">' + tag + legMi(l) + (l.uber ? ' · 🚕 UBER' : '') + '</span>' +
       (RO ? ' ' + stat(t, k) : '') +
       stop('from', L().pickup, l.from, l.fromCsz, l.fromMap) + stop('to', L().dropoff, l.to, l.toCsz, l.toMap) + checks(t, k) + '</div>';
   }
@@ -410,7 +422,8 @@
     ask(L().confUndo.replace('{s}', btn.getAttribute('data-label')).replace('{n}', btn.getAttribute('data-name')), function () { queueStep(btn, true); });
   }
   function card(t) {
-    var legs = t.ida && t.regreso ? L().both : t.ida ? L().goOnly : L().retOnly;
+    var nk = legKeys(t).length;
+    var legs = nk > 2 ? nk + ' ' + L().segs : t.ida && t.regreso ? L().both : t.ida ? L().goOnly : L().retOnly;
     var id = cid(t), shut = COLLAPSED.indexOf(id) >= 0;
     var h = '<div class="card' + (shut ? ' shut' : '') + '" data-cid="' + esc(id) + '"><div class="chead" role="button"><div class="time">' + esc(t.time) + '</div><div class="whobox"><div class="who">' + esc(nice(t.name)) + '</div><div class="sub">' + legs + ' · ' + mi(t.miles) + '</div></div>' + doneTag(t) + '<span class="chev">▾</span></div><div class="cbody">';
     var b = '';
@@ -419,7 +432,7 @@
     if (b) h += '<div class="btns">' + b + '</div>';
     var note = (LANG || DATA.lang) === 'es' ? t.notas : (t.notes || t.notas);
     if (note) h += '<div class="note">⚠️ ' + esc(note) + '</div>';
-    return h + leg(t, 'ida') + leg(t, 'regreso') + '</div></div>';
+    return h + legKeys(t).map(function (k) { return leg(t, k); }).join('') + '</div></div>';
   }
   function cid(t) { return [t.id || t.trip || '', t.date || '', t.time || '', t.name || ''].join('|'); }
   function stats(trips) {
@@ -456,22 +469,22 @@
   }
   function isDone(t) {
     var d = t.done || {}, n = 0;
-    ['ida', 'regreso'].forEach(function (k) { if (t[k]) { n++; if (!d[k + '_dropoff']) n = -99; } });
+    LEGS.forEach(function (k) { if (t[k]) { n++; if (!d[k + '_dropoff']) n = -99; } });
     return n > 0;
   }
   function doneTag(t) { return isDone(t) ? '<span class="cdone">✓ ' + L().completed + '</span>' : ''; }
   function legRow(t, k) {
     var l = t[k]; if (!l) return '';
-    var cls = k === 'ida' ? 'ida' : 'ret', tag = k === 'ida' ? 'GOING' : 'RETURN';
+    var cls = /^ida/.test(k) ? 'ida' : 'ret', tag = segTag(t, k, true);
     var drv = l.driver ? esc(l.driver) : '<span class="st na">Unassigned</span>';
-    return '<div class="lrow ' + cls + '"><span class="legtag">' + tag + '</span><span class="drv">' + drv + '<div class="rt">' + esc(l.from) + ' → ' + esc(l.to) + ' · ' + mi(l.miles) + '</div></span>' + stat(t, k) + '</div>' +
+    return '<div class="lrow ' + cls + '"><span class="legtag">' + tag + '</span><span class="drv">' + drv + '<div class="rt">' + esc(l.from) + ' → ' + esc(l.to) + legMi(l) + '</div></span>' + stat(t, k) + '</div>' +
       (l.driver ? '<div class="achk">' + checks(t, k, l.driver) + '</div>' : '');
   }
   function tripRow(t) {
     var id = 'all|' + t.key + '|' + t.date, shut = COLLAPSED.indexOf(id) >= 0;
     var h = '<div class="card' + (shut ? ' shut' : '') + '" data-cid="' + esc(id) + '"><div class="chead" role="button"><div class="time">' + esc(t.time) + '</div><div class="whobox"><div class="who">' + esc(nice(t.name)) + '</div><div class="sub">' + esc(t.src) + ' · ' + mi(t.miles) + '</div></div>' + doneTag(t) + '<span class="chev">▾</span></div><div class="cbody">';
     if (t.notes) h += '<div class="note" style="margin:0 14px 10px">⚠️ ' + esc(t.notes) + '</div>';
-    return h + legRow(t, 'ida') + legRow(t, 'regreso') + '</div></div>';
+    return h + legKeys(t).map(function (k) { return legRow(t, k); }).join('') + '</div></div>';
   }
   function renderTrips() {
     var a = DATA.all, t = a.today, done = t.filter(isDone).length;
@@ -530,7 +543,7 @@
         h += '<details class="dv"><summary><span>' + esc(d.name) + ' <span style="color:var(--muted);font-size:12px;font-weight:700">· ' + d.trips.length + ' trips</span></span><span>' + (d.amount ? $0(d.amount) : '<span class="st pend">Pay not entered</span>') + '</span></summary>' +
           (src ? '<div class="tr"><span>' + src + '</span></div>' : '') +
           d.trips.map(function (t) {
-            var legs = t.legs.length === 2 ? 'Round trip' : t.legs[0] === 'ida' ? 'Going' : 'Return';
+            var legs = t.legs.length > 2 ? t.legs.length + ' segments' : t.legs.length === 2 ? 'Round trip' : /^ida/.test(t.legs[0]) ? 'Going' : 'Return';
             return '<div class="tr"><span>' + esc(md(t.date)) + ' ' + esc(t.time) + ' · ' + esc(nice(t.name)) + '</span><span>' + legs + '</span></div>';
           }).join('') + '</details>';
       });
